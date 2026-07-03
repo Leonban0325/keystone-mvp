@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design tokens — themable via WhiteLabelTheme (persona themeOverride swaps these). */
+:root {
+  --ink: #122a3e;
+  --paper: #f6f2e9;
+  --brass: #b98a2f;
+  --grey: #6e7680;
+  --hairline: #ddd8cc;
+}
+
+body {
+  @apply bg-paper text-ink font-sans antialiased;
+  /* Tabular numerals for all figures, per the deck. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hairline rules everywhere — no shadows, no gradients, no pills. */
+.rule {
+  border-color: var(--hairline);
+}

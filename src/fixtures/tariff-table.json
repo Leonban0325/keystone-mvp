@@ -1,0 +1,27 @@
+{
+  "label": "Common-area energy tariffs, €/kWh all-in (simulated feed)",
+  "currentSupplier": "ENGIE Pro Référence",
+  "currentRate": 0.2516,
+  "estimatedAnnualKwh": 6200,
+  "offers": [
+    { "supplier": "ENGIE Pro Référence", "rate": 0.2516 },
+    { "supplier": "EDF Pro Zen", "rate": 0.2402 },
+    { "supplier": "TotalEnergies Flex Pro", "rate": 0.2344 },
+    { "supplier": "Octopus Énergie Éco Pro", "rate": 0.2181 }
+  ],
+  "insurance": {
+    "label": "PNO multi-unit requote (simulated broker feed)",
+    "currentAnnualPremiumCents": 68500,
+    "bestQuoteAnnualPremiumCents": 54000,
+    "bestQuoteInsurer": "Luko PNO Portefeuille"
+  },
+  "renovationGrants": {
+    "label": "MaPrimeRénov' eligibility (simulated ANAH feed)",
+    "eligibleDpeClasses": ["F", "G"],
+    "grantCents": 400000,
+    "dpeByProperty": [
+      { "propertyId": "fr-p6", "dpe": "F" },
+      { "propertyId": "fr-p4", "dpe": "D" }
+    ]
+  }
+}

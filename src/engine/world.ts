@@ -16,6 +16,7 @@ import { complianceView, evaluatePortfolio } from './compliance/evaluator'
 import { RULESETS } from './compliance/rulesets'
 import { Finding } from './compliance/types'
 import { mulberry32 } from './seed/rng'
+import { detectOpportunities, SavingsOpportunity } from './savings/detectors'
 import { DunningStage, PersonaSeed, SeedLease } from './seed/types'
 
 /** Distribution holdback: kept in owner_payable to cover card spend + arrears. */
@@ -28,6 +29,18 @@ export interface PendingCollection {
   leaseId: string
 }
 
+/** Serializable world state — survives page refresh via localStorage. */
+export interface WorldSnapshot {
+  personaId: string
+  events: JournalEvent[]
+  today: string
+  dfr: number
+  arrearsSince: [string, string][]
+  forceRFrom: [string, string][]
+  pendingIntents: PendingCollection[]
+  executedSavings: string[]
+}
+
 export interface WorldState {
   journal: Journal
   leases: SeedLease[]
@@ -38,6 +51,7 @@ export interface WorldState {
   /** leaseId → collections R-fail on/after this date. */
   forceRFrom: Map<string, string>
   pendingIntents: PendingCollection[]
+  executedSavings: Set<string>
   rand: () => number
 }
 
@@ -66,20 +80,36 @@ export class DemoWorld {
   readonly state: WorldState
   readonly clock: DemoClock
 
-  constructor(persona: PersonaSeed) {
+  constructor(persona: PersonaSeed, snapshot?: WorldSnapshot) {
     this.state = {
-      journal: Journal.fromEvents(persona.events),
+      journal: Journal.fromEvents(snapshot?.events ?? persona.events),
       leases: persona.leases,
       persona,
-      dfr: BASE_DFR,
-      arrearsSince: new Map(),
-      forceRFrom: new Map(Object.entries(persona.forceRFrom ?? {})),
-      pendingIntents: [],
+      dfr: snapshot?.dfr ?? BASE_DFR,
+      arrearsSince: new Map(snapshot?.arrearsSince ?? []),
+      forceRFrom: new Map(
+        snapshot ? snapshot.forceRFrom : Object.entries(persona.forceRFrom ?? {}),
+      ),
+      pendingIntents: snapshot?.pendingIntents ?? [],
+      executedSavings: new Set(snapshot?.executedSavings ?? []),
       rand: mulberry32(0x5eed),
     }
-    this.clock = new DemoClock(persona.historyFrom)
+    this.clock = new DemoClock(snapshot?.today ?? persona.historyFrom)
     this.clock.onTick((day, isMonthStart) => this.tick(day, isMonthStart))
-    this.clock.advanceTo(persona.epoch)
+    if (!snapshot) this.clock.advanceTo(persona.epoch)
+  }
+
+  snapshot(): WorldSnapshot {
+    return {
+      personaId: this.state.persona.id,
+      events: [...this.journal.all],
+      today: this.today,
+      dfr: this.state.dfr,
+      arrearsSince: [...this.state.arrearsSince],
+      forceRFrom: [...this.state.forceRFrom],
+      pendingIntents: this.state.pendingIntents,
+      executedSavings: [...this.state.executedSavings],
+    }
   }
 
   get journal(): Journal {
@@ -189,6 +219,40 @@ export class DemoWorld {
 
   dunningStage(leaseId: string): DunningStage {
     return deriveDunning(this.state, leaseId, this.today)
+  }
+
+  /** Execute a savings opportunity: books the success fee, marks it done. */
+  executeSavings(opportunity: SavingsOpportunity): JournalEvent {
+    if (this.state.executedSavings.has(opportunity.id)) {
+      throw new Error(`Savings ${opportunity.id} already executed`)
+    }
+    const property = this.state.persona.properties.find((p) => p.id === opportunity.propertyId)!
+    const event = this.journal.append({
+      id: this.journal.nextId(),
+      date: this.today,
+      kind: 'savings_success_fee',
+      memo: `${opportunity.label} executed — success fee on €${(opportunity.savingsCents / 100).toFixed(0)} savings`,
+      postings: [
+        posting(ACCOUNTS.ownerPayable(property.entityId), 'debit', opportunity.successFeeCents, {
+          entityId: property.entityId,
+          propertyId: property.id,
+          category: 'savings_fee',
+        }),
+        posting(ACCOUNTS.feeIncome('savings_share'), 'credit', opportunity.successFeeCents, {
+          propertyId: property.id,
+          category: 'savings_fee',
+        }),
+      ],
+    })
+    this.state.executedSavings.add(opportunity.id)
+    return event
+  }
+
+  savingsOpportunities(): (SavingsOpportunity & { executed: boolean })[] {
+    return detectOpportunities(this.state.persona).map((o) => ({
+      ...o,
+      executed: this.state.executedSavings.has(o.id),
+    }))
   }
 
   /** Commit a finding's prepared remediation as a real journal event. */

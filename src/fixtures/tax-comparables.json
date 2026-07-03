@@ -1,0 +1,17 @@
+{
+  "label": "Taxe foncière comparables — valeur locative cadastrale, €/m²/yr (simulated feed)",
+  "comparables": [
+    { "city": "Paris 11e", "medianPerSqm": 24.1 },
+    { "city": "Lyon 3e", "medianPerSqm": 18.6 },
+    { "city": "Lyon 2e", "medianPerSqm": 19.2 },
+    { "city": "Lyon 6e", "medianPerSqm": 17.9 }
+  ],
+  "assessments": [
+    { "propertyId": "fr-p1", "sqm": 48, "assessedPerSqm": 32.0 },
+    { "propertyId": "fr-p2", "sqm": 45, "assessedPerSqm": 24.8 },
+    { "propertyId": "fr-p3", "sqm": 52, "assessedPerSqm": 25.0 },
+    { "propertyId": "fr-p4", "sqm": 58, "assessedPerSqm": 19.1 },
+    { "propertyId": "fr-p5", "sqm": 50, "assessedPerSqm": 19.5 },
+    { "propertyId": "fr-p6", "sqm": 41, "assessedPerSqm": 18.2 }
+  ]
+}
