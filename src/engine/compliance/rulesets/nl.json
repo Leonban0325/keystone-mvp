@@ -1,0 +1,38 @@
+{
+  "jurisdiction": "NL",
+  "version": "2026.1",
+  "source": "Wet goed verhuurderschap (2023) & Burgerlijk Wetboek Boek 7",
+  "rules": [
+    {
+      "id": "NL-DEP-CAP",
+      "check": "deposit_cap",
+      "severity": "violation",
+      "legal_ref": "Wet goed verhuurderschap, art. 2 lid 2 sub e",
+      "message": "Deposit exceeds the two-month cap",
+      "params": {
+        "unfurnishedMonths": 2,
+        "furnishedMonths": 2,
+        "basis": "rent_excl_charges"
+      },
+      "remediation": "refund_excess"
+    },
+    {
+      "id": "NL-DEP-RETURN",
+      "check": "return_deadline",
+      "severity": "violation",
+      "legal_ref": "Wet goed verhuurderschap, art. 2 lid 2 sub e · BW 7:261b",
+      "message": "Deposit must be returned within 14 days of lease end",
+      "params": {
+        "days": 14
+      }
+    },
+    {
+      "id": "NL-DEP-INTEREST",
+      "check": "tenant_interest",
+      "severity": "info",
+      "legal_ref": "BW Boek 7 (silent — no statutory remuneration)",
+      "message": "No tenant interest owed on deposits in the Netherlands",
+      "params": { "required": false }
+    }
+  ]
+}

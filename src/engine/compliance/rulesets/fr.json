@@ -1,0 +1,43 @@
+{
+  "jurisdiction": "FR",
+  "version": "2026.1",
+  "source": "Loi n° 89-462 du 6 juillet 1989 tendant à améliorer les rapports locatifs",
+  "rules": [
+    {
+      "id": "FR-DEP-CAP",
+      "check": "deposit_cap",
+      "severity": "violation",
+      "legal_ref": "Loi 89-462, art. 22 (unfurnished) · art. 25-6 (furnished)",
+      "message": "Security deposit exceeds the statutory cap",
+      "params": {
+        "unfurnishedMonths": 1,
+        "furnishedMonths": 2,
+        "basis": "rent_excl_charges"
+      },
+      "remediation": "refund_excess"
+    },
+    {
+      "id": "FR-DEP-RETURN",
+      "check": "return_deadline",
+      "severity": "violation",
+      "legal_ref": "Loi 89-462, art. 22 al. 3–7",
+      "message": "Deposit return deadline",
+      "params": {
+        "monthsConforming": 1,
+        "monthsNonConforming": 2,
+        "penalty": {
+          "type": "percent_of_monthly_rent_per_commenced_month",
+          "percent": 10
+        }
+      }
+    },
+    {
+      "id": "FR-DEP-INTEREST",
+      "check": "tenant_interest",
+      "severity": "info",
+      "legal_ref": "Loi 89-462, art. 22 (silent — no statutory remuneration)",
+      "message": "No tenant interest owed on deposits in France",
+      "params": { "required": false }
+    }
+  ]
+}
