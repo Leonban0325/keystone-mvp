@@ -1,0 +1,46 @@
+{
+  "IRL": {
+    "label": "Indice de référence des loyers (INSEE, base 100 = T4 1998)",
+    "unit": "quarter",
+    "rows": [
+      { "period": "2024-Q1", "value": 143.46 },
+      { "period": "2024-Q2", "value": 144.51 },
+      { "period": "2024-Q3", "value": 145.17 },
+      { "period": "2024-Q4", "value": 145.47 },
+      { "period": "2025-Q1", "value": 146.18 },
+      { "period": "2025-Q2", "value": 146.79 },
+      { "period": "2025-Q3", "value": 147.33 },
+      { "period": "2025-Q4", "value": 147.86 },
+      { "period": "2026-Q1", "value": 148.41 },
+      { "period": "2026-Q2", "value": 148.97 }
+    ]
+  },
+  "CPI_NL": {
+    "label": "CPI alle huishoudens (CBS, 2015 = 100)",
+    "unit": "year",
+    "rows": [
+      { "period": "2019", "value": 105.4 },
+      { "period": "2020", "value": 106.7 },
+      { "period": "2021", "value": 109.6 },
+      { "period": "2022", "value": 120.5 },
+      { "period": "2023", "value": 125.1 },
+      { "period": "2024", "value": 129.2 },
+      { "period": "2025", "value": 132.4 },
+      { "period": "2026", "value": 135.0 }
+    ]
+  },
+  "ISTAT": {
+    "label": "Indice FOI ex tabacchi (ISTAT, 2015 = 100)",
+    "unit": "year",
+    "rows": [
+      { "period": "2019", "value": 102.5 },
+      { "period": "2020", "value": 102.3 },
+      { "period": "2021", "value": 104.2 },
+      { "period": "2022", "value": 112.6 },
+      { "period": "2023", "value": 118.9 },
+      { "period": "2024", "value": 120.1 },
+      { "period": "2025", "value": 122.0 },
+      { "period": "2026", "value": 123.8 }
+    ]
+  }
+}

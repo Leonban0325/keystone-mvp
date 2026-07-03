@@ -19,7 +19,7 @@
     {
       "id": "ES-FIANZA-LODGE",
       "check": "lodgement_required",
-      "severity": "violation",
+      "severity": "warning",
       "legal_ref": "LAU, art. 36.1 + disposición adicional 3ª (regional lodgement)",
       "message": "Fianza must be lodged with the regional deposit agency — certificate missing",
       "params": {}

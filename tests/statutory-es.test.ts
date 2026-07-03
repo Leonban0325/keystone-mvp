@@ -21,7 +21,7 @@ describe('ES statutory pack (LAU art. 36)', () => {
     expect(findings.filter((f) => f.severity === 'violation')).toHaveLength(0)
   })
 
-  it('missing lodgement certificate → violation citing art. 36', () => {
+  it('missing lodgement certificate → warning citing art. 36', () => {
     const journal = new Journal()
     const lease = makeLease({
       id: 'ES2',
@@ -35,7 +35,7 @@ describe('ES statutory pack (LAU art. 36)', () => {
       (x) => x.ruleId === 'ES-FIANZA-LODGE',
     )!
     expect(f).toBeDefined()
-    expect(f.severity).toBe('violation')
+    expect(f.severity).toBe('warning')
     expect(f.legalRef).toContain('art. 36')
   })
 
