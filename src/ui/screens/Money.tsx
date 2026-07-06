@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useApp } from '../store'
-import { eur, formatDate } from '../format'
+import { eur, eurCompact, formatDate } from '../format'
 import { Badge, Button, Card } from '../components'
 import { JournalEvent } from '../../engine/ledger/types'
 import { addMonths } from '../../engine/compliance/dates'
+import { moneyRollup, RollupLevel } from '../../engine/analytics'
 
 const KIND_LABELS: Record<string, string> = {
   rent_due: 'Rent due',
@@ -12,6 +13,7 @@ const KIND_LABELS: Record<string, string> = {
   transfer_compensation: 'R-transaction',
   saas_fee: 'SaaS fee',
   saas_fee_flat: 'SaaS fee (flat mode)',
+  manager_fee: 'Manager fee',
   yield_accrual: 'Yield accrual',
   card_spend: 'Card spend',
   interchange_income: 'Interchange',
@@ -24,13 +26,47 @@ const KIND_LABELS: Record<string, string> = {
   savings_success_fee: 'Savings success fee',
 }
 
+interface Crumb {
+  label: string
+  level: RollupLevel
+  parentId?: string
+}
+
 export default function Money() {
-  const { world, rev, mutate } = useApp()
+  const { world, rev, mutate, focus, setFocus } = useApp()
   const [kindFilter, setKindFilter] = useState('')
   const [propertyFilter, setPropertyFilter] = useState('')
+  const [leaseFilter, setLeaseFilter] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [waterfallProperty, setWaterfallProperty] = useState(
     world.state.persona.properties[0]?.id ?? '',
+  )
+
+  // §4 roll-up levels: default depends on role; deep links land pre-drilled.
+  const role = world.state.persona.role
+  const [trail, setTrail] = useState<Crumb[]>(() => {
+    if (focus?.entityId) {
+      const name = world.state.persona.entities.find((e) => e.id === focus.entityId)?.name ?? 'owner'
+      return [
+        { label: 'Portfolio', level: 'portfolio' },
+        { label: name, level: 'property', parentId: focus.entityId },
+      ]
+    }
+    if (role === 'owner') return [{ label: 'By lease', level: 'lease' }]
+    return [{ label: 'Portfolio', level: 'portfolio' }]
+  })
+
+  useEffect(() => {
+    if (focus?.leaseId) setLeaseFilter(focus.leaseId)
+    if (focus) setFocus(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const current = trail[trail.length - 1]
+  const rollupRows = useMemo(
+    () => moneyRollup(world, current.level, current.parentId),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [world, rev, current.level, current.parentId],
   )
 
   const events = useMemo(() => {
@@ -39,16 +75,89 @@ export default function Money() {
     if (propertyFilter) {
       list = list.filter((e) => e.postings.some((p) => p.dims.propertyId === propertyFilter))
     }
+    if (leaseFilter) {
+      list = list.filter((e) => e.postings.some((p) => p.dims.leaseId === leaseFilter))
+    }
     return list.slice(0, 120)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [world, rev, kindFilter, propertyFilter])
+  }, [world, rev, kindFilter, propertyFilter, leaseFilter])
 
   const kinds = [...new Set(world.journal.all.map((e) => e.kind))]
   const pending = world.state.pendingIntents
 
+  const drillInto = (rowId: string, childLevel: RollupLevel) => {
+    const label = rollupRows.find((r) => r.id === rowId)?.label ?? rowId
+    setTrail([...trail, { label, level: childLevel, parentId: rowId === 'portfolio' ? undefined : rowId }])
+  }
+
   return (
     <div className="space-y-5">
       <h1 className="text-xl font-semibold tracking-tight">Money</h1>
+
+      {/* §4 · roll-up before drill-down */}
+      <Card title="Roll-up — the journal folded by dimension">
+        <div className="mb-3 flex items-center gap-1 text-sm">
+          {trail.map((crumb, i) => (
+            <span key={i} className="flex items-center gap-1">
+              {i > 0 && <span className="text-greyx">›</span>}
+              <button
+                className={i === trail.length - 1 ? 'font-semibold' : 'text-brass hover:underline'}
+                onClick={() => setTrail(trail.slice(0, i + 1))}
+              >
+                {crumb.label}
+              </button>
+            </span>
+          ))}
+          <span className="ml-auto text-xs text-greyx">
+            {current.level === 'portfolio'
+              ? 'click a row to fold by owner'
+              : current.level === 'owner'
+                ? 'click an owner to see their properties'
+                : current.level === 'property'
+                  ? 'click a property to see its leases'
+                  : 'click a lease to filter the journal below'}
+          </span>
+        </div>
+        <div className="max-h-72 overflow-y-auto">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-paper">
+              <tr className="text-left text-[11px] uppercase tracking-[0.1em] text-greyx">
+                <th className="py-1 font-medium">{current.level}</th>
+                <th className="py-1 text-right font-medium">In</th>
+                <th className="py-1 text-right font-medium">Out</th>
+                <th className="py-1 text-right font-medium">Net</th>
+                <th className="py-1 text-right font-medium">Balance held</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rollupRows.map((row) => (
+                <tr
+                  key={row.id}
+                  className="cursor-pointer border-t rule hover:bg-white/50"
+                  onClick={() =>
+                    row.children
+                      ? drillInto(row.id, row.children)
+                      : setLeaseFilter(leaseFilter === row.id ? '' : row.id)
+                  }
+                >
+                  <td className="max-w-72 truncate py-1.5 font-medium">
+                    {row.label}
+                    {!row.children && leaseFilter === row.id && (
+                      <Badge tone="brass"> journal filtered</Badge>
+                    )}
+                  </td>
+                  <td className="py-1.5 text-right">{eurCompact(row.inCents)}</td>
+                  <td className="py-1.5 text-right">{eurCompact(row.outCents)}</td>
+                  <td className={`py-1.5 text-right ${row.netCents < 0 ? 'text-[#B4392E]' : ''}`}>
+                    {eurCompact(row.netCents)}
+                  </td>
+                  <td className="py-1.5 text-right">{eurCompact(row.balanceCents)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
       <div className="grid grid-cols-2 gap-5">
         <Card title="Payout waterfall — last month">
@@ -57,7 +166,7 @@ export default function Money() {
             value={waterfallProperty}
             onChange={(e) => setWaterfallProperty(e.target.value)}
           >
-            {world.state.persona.properties.map((p) => (
+            {world.state.persona.properties.slice(0, 200).map((p) => (
               <option key={p.id} value={p.id}>
                 {p.label}
               </option>
@@ -72,29 +181,33 @@ export default function Money() {
               Nothing in flight. SDD collections fire on the 3rd — advance the clock.
             </div>
           )}
-          <table className="w-full text-sm">
-            <tbody>
-              {pending.map((p) => (
-                <tr key={p.intent.id} className="border-t rule first:border-t-0">
-                  <td className="py-2">{p.intent.memo}</td>
-                  <td className="py-2 text-right">{eur(p.intent.postings[0].amountCents)}</td>
-                  <td className="py-2 text-right">
-                    <span className="mr-2 text-xs text-greyx">
-                      settles {formatDate(p.settleOn)}
-                    </span>
-                    <Button
-                      onClick={() => mutate((w) => w.resolvePendingNow(p.intent.id, 'settle'))}
-                    >
-                      Settle now
-                    </Button>{' '}
-                    <Button onClick={() => mutate((w) => w.resolvePendingNow(p.intent.id, 'fail'))}>
-                      Force R
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="max-h-64 overflow-y-auto">
+            <table className="w-full text-sm">
+              <tbody>
+                {pending.slice(0, 30).map((p) => (
+                  <tr key={p.intent.id} className="border-t rule first:border-t-0">
+                    <td className="py-2">{p.intent.memo}</td>
+                    <td className="py-2 text-right">{eur(p.intent.postings[0].amountCents)}</td>
+                    <td className="py-2 text-right">
+                      <span className="mr-2 text-xs text-greyx">
+                        settles {formatDate(p.settleOn)}
+                      </span>
+                      <Button
+                        onClick={() => mutate((w) => w.resolvePendingNow(p.intent.id, 'settle'))}
+                      >
+                        Settle now
+                      </Button>{' '}
+                      <Button
+                        onClick={() => mutate((w) => w.resolvePendingNow(p.intent.id, 'fail'))}
+                      >
+                        Force R
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Card>
       </div>
 
@@ -118,12 +231,17 @@ export default function Money() {
             onChange={(e) => setPropertyFilter(e.target.value)}
           >
             <option value="">All properties</option>
-            {world.state.persona.properties.map((p) => (
+            {world.state.persona.properties.slice(0, 200).map((p) => (
               <option key={p.id} value={p.id}>
                 {p.label}
               </option>
             ))}
           </select>
+          {leaseFilter && (
+            <Button tone="quiet" onClick={() => setLeaseFilter('')}>
+              lease: {leaseFilter} ✕
+            </Button>
+          )}
         </div>
 
         <table className="w-full text-sm">
@@ -209,12 +327,13 @@ function EventRow(props: { event: JournalEvent; expanded: boolean; onToggle: () 
   )
 }
 
-/** Rent in → SaaS fee → vendor spend (card) → owner, from last month's journal. */
+/** Rent in → manager fee → SaaS fee → vendor spend (card) → owner, from last month's journal. */
 function Waterfall(props: { propertyId: string }) {
   const { world } = useApp()
   const monthStart = addMonths(world.today.slice(0, 8) + '01', -1)
   const monthEnd = world.today.slice(0, 8) + '01'
   const lease = world.state.leases.find((l) => l.propertyId === props.propertyId)
+  const managerPct = world.state.persona.managerFeePct ?? 0
 
   let rentIn = 0
   let saas = 0
@@ -232,12 +351,14 @@ function Waterfall(props: { propertyId: string }) {
       vendor += event.postings[0].amountCents
     }
   }
-  const owner = Math.max(0, rentIn - saas - vendor)
+  const managerFee = Math.round(rentIn * managerPct)
+  const owner = Math.max(0, rentIn - saas - vendor - managerFee)
   const total = Math.max(1, rentIn)
   const width = (v: number) => `${Math.max(1, (v / total) * 100)}%`
 
   const parts = [
     { label: 'Rent in', value: rentIn, color: 'var(--ink)' },
+    ...(managerFee > 0 ? [{ label: `Manager fee (${(managerPct * 100).toFixed(0)}%)`, value: managerFee, color: '#6E7680' }] : []),
     { label: 'SaaS fee', value: saas, color: 'var(--brass)' },
     { label: 'Vendors (card)', value: vendor, color: '#8A6D3B' },
     { label: 'To owner', value: owner, color: '#3D6B47' },

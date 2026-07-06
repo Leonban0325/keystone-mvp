@@ -1,32 +1,77 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useApp } from '../store'
-import { eur, formatDate } from '../format'
+import { eur, eurCompact, formatDate } from '../format'
 import { Badge, Button, Card } from '../components'
 import { SeedLease } from '../../engine/seed/types'
 import { Jurisdiction } from '../../engine/ledger/types'
 import { calculateRevision } from '../../engine/indexation/calculator'
+import { upcomingLeaseEvents, rentSparkline } from '../../engine/analytics'
 import { extractLease, ExtractionResult } from '../../ai/extract'
+import PropertyMap, { ComplianceTone } from '../PropertyMap'
+import { Sparkline } from '../charts'
 import sampleLease from '../../fixtures/sample-lease.txt?raw'
 
 export default function Leases() {
-  const { world, rev } = useApp()
+  const { world, rev, focus, setFocus } = useApp()
   void rev
   const [selected, setSelected] = useState<string | null>(null)
+  const [selectedProperty, setSelectedProperty] = useState<string | null>(null)
   const [wizardOpen, setWizardOpen] = useState(false)
+  const [view, setView] = useState<'list' | 'map'>('list')
+
+  // Cmd-K deep link: property → its detail card.
+  useEffect(() => {
+    if (focus?.propertyId) setSelectedProperty(focus.propertyId)
+    if (focus) setFocus(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const findings = world.findings()
+  const statusByProperty = useMemo(() => {
+    const map = new Map<string, ComplianceTone>()
+    for (const finding of findings) {
+      if (finding.severity === 'info') continue
+      const lease = world.state.leases.find((l) => l.id === finding.leaseId)
+      if (!lease) continue
+      const current = map.get(lease.propertyId)
+      if (finding.severity === 'violation') map.set(lease.propertyId, 'red')
+      else if (current !== 'red') map.set(lease.propertyId, 'amber')
+    }
+    return map
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [findings, world])
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold tracking-tight">Properties & Leases</h1>
-        <Button tone="primary" onClick={() => setWizardOpen(!wizardOpen)}>
-          {wizardOpen ? 'Close wizard' : 'New lease'}
-        </Button>
+        <div className="flex gap-2">
+          <Button tone="quiet" onClick={() => setView(view === 'list' ? 'map' : 'list')}>
+            {view === 'list' ? 'Map view' : 'List view'}
+          </Button>
+          <Button tone="primary" onClick={() => setWizardOpen(!wizardOpen)}>
+            {wizardOpen ? 'Close wizard' : 'New lease'}
+          </Button>
+        </div>
       </div>
 
       {wizardOpen && <NewLeaseWizard onDone={() => setWizardOpen(false)} />}
 
+      {view === 'map' && (
+        <Card title="Portfolio map — pins colored by compliance">
+          <PropertyMap
+            statusByProperty={statusByProperty}
+            selected={selectedProperty}
+            onSelect={setSelectedProperty}
+          />
+        </Card>
+      )}
+
+      {selectedProperty && (
+        <PropertyCard propertyId={selectedProperty} onClose={() => setSelectedProperty(null)} />
+      )}
+
+      {view === 'list' && (
       <Card>
         <table className="w-full text-sm">
           <thead>
@@ -36,11 +81,12 @@ export default function Leases() {
               <th className="py-1 font-medium">Tenant(s)</th>
               <th className="py-1 text-right font-medium">Rent</th>
               <th className="py-1 text-right font-medium">Deposit held</th>
+              <th className="py-1 text-right font-medium">6-mo rent</th>
               <th className="py-1 font-medium">Status</th>
             </tr>
           </thead>
           <tbody>
-            {world.state.leases.map((lease) => {
+            {world.state.leases.slice(0, 120).map((lease) => {
               const property = world.state.persona.properties.find(
                 (p) => p.id === lease.propertyId,
               )
@@ -64,6 +110,9 @@ export default function Leases() {
                   <td className="py-2 text-right">
                     {eur(world.journal.balance(`liabilities:deposits_held:${lease.id}`))}
                   </td>
+                  <td className="py-2 text-right">
+                    <Sparkline values={rentSparkline(world, { leaseId: lease.id })} />
+                  </td>
                   <td className="py-2">
                     <span className="flex flex-wrap gap-1">
                       {lease.moveOutDate && <Badge tone="brass">moving out</Badge>}
@@ -83,9 +132,90 @@ export default function Leases() {
             })}
           </tbody>
         </table>
+        {world.state.leases.length > 120 && (
+          <div className="mt-2 text-xs text-greyx">
+            Showing 120 of {world.state.leases.length} — use ⌘K search or the map to jump.
+          </div>
+        )}
       </Card>
+      )}
 
       {selected && <LeaseDetail leaseId={selected} />}
+    </div>
+  )
+}
+
+/** §7 property detail card — from pin or search hit. */
+function PropertyCard(props: { propertyId: string; onClose: () => void }) {
+  const { world, setScreen, setFocus } = useApp()
+  const property = world.state.persona.properties.find((p) => p.id === props.propertyId)
+  if (!property) return null
+  const leases = world.state.leases.filter((l) => l.propertyId === props.propertyId)
+  const active = leases.filter((l) => !l.moveOutDate || l.moveOutDate > world.today)
+  const deposits = leases.reduce(
+    (s, l) => s + world.journal.balance(`liabilities:deposits_held:${l.id}`),
+    0,
+  )
+  const nextEvent = upcomingLeaseEvents(world, 365).find((e) =>
+    leases.some((l) => l.id === e.leaseId),
+  )
+  const findings = world
+    .findings()
+    .filter((f) => leases.some((l) => l.id === f.leaseId) && f.severity !== 'info')
+
+  return (
+    <Card title={`Property — ${property.label}, ${property.city}`}>
+      <div className="grid grid-cols-4 gap-6 text-sm">
+        <div className="space-y-1.5">
+          <PField label="Regime" value={property.jurisdiction} />
+          <PField label="Units / occupied" value={`${leases.length} / ${active.length}`} />
+          <PField
+            label="Occupancy"
+            value={leases.length ? `${Math.round((active.length / leases.length) * 100)}%` : '—'}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <PField label="Deposits held (segregated)" value={eurCompact(deposits)} />
+          <PField
+            label="Rent roll"
+            value={`${eurCompact(active.reduce((s, l) => s + l.monthlyRentCents, 0))}/mo`}
+          />
+          <PField
+            label="Compliance"
+            value={findings.length === 0 ? 'clean' : `${findings.length} open finding(s)`}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <PField
+            label="Next lease event"
+            value={nextEvent ? `${nextEvent.type} · ${formatDate(nextEvent.date)}` : 'none in 12 months'}
+          />
+          <PField label="Tenants" value={active.map((l) => l.tenantNames[0]).join(', ') || '—'} />
+        </div>
+        <div className="flex flex-col items-end justify-between gap-2">
+          <Button
+            tone="quiet"
+            onClick={() => {
+              setFocus({ entityId: property.entityId })
+              setScreen('money')
+            }}
+          >
+            Money roll-up →
+          </Button>
+          <Button tone="quiet" onClick={props.onClose}>
+            Close
+          </Button>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+function PField(props: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-4">
+      <span className="text-greyx">{props.label}</span>
+      <span className="text-right">{props.value}</span>
     </div>
   )
 }

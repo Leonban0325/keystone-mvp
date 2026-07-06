@@ -64,9 +64,18 @@ export function defaultScreen(role: Role): Screen {
   return 'dashboard'
 }
 
+/** Cmd-K deep-link payload, consumed (and cleared) by the target screen. */
+export interface Focus {
+  leaseId?: string
+  propertyId?: string
+  entityId?: string
+}
+
 interface AppState {
   world: DemoWorld
   personaId: string
+  focus: Focus | null
+  setFocus(focus: Focus | null): void
   /** Bumped after every mutation — components subscribe to this to re-render. */
   rev: number
   screen: Screen
@@ -95,6 +104,9 @@ export const useApp = create<AppState>((set, get) => ({
   demoClean: new URLSearchParams(window.location.search).get('demo') === 'clean',
   needsPicker: !initial.hadSnapshot,
   whiteLabel: true,
+
+  focus: null,
+  setFocus: (focus) => set({ focus }),
 
   setScreen: (screen) => set({ screen }),
 

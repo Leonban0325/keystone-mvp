@@ -108,6 +108,29 @@ describe('cash-flow folds', () => {
   })
 })
 
+describe('§5 savings engine v2', () => {
+  it('A1 and B1 show ≥5 opportunities, all with logic trails and confidence', () => {
+    for (const id of ['a1-meridian', 'b1-haussmann']) {
+      const world = new DemoWorld(buildPersona(id))
+      const opportunities = world.savingsOpportunities()
+      expect(opportunities.length).toBeGreaterThanOrEqual(5)
+      const detectors = new Set(opportunities.map((o) => o.detector))
+      expect(detectors.size).toBe(5) // all five detectors fire
+      for (const o of opportunities) {
+        expect(o.logicTrail.length).toBeGreaterThan(10)
+        expect(o.confidence).toBeGreaterThan(0.5)
+        expect(o.confidence).toBeLessThanOrEqual(1)
+      }
+    }
+  })
+
+  it('A1 keeps the €379.20 tax appeal (the +€8,400 moment)', () => {
+    const world = new DemoWorld(buildPersona('a1-meridian'))
+    const appeal = world.savingsOpportunities().find((o) => o.id === 'tax-appeal-fr-p1')!
+    expect(appeal.savingsCents).toBe(37_920)
+  })
+})
+
 describe('§6 global search', () => {
   it('resolves a tenant by name in the demo seed', () => {
     const world = new DemoWorld(buildPersona('a1-meridian'))

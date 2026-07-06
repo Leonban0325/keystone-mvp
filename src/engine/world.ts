@@ -121,7 +121,14 @@ export class DemoWorld {
     persona.properties.push(...this.extraProperties)
     this.clock = new DemoClock(snapshot?.today ?? persona.historyFrom)
     this.clock.onTick((day, isMonthStart) => this.tick(day, isMonthStart))
-    if (!snapshot) this.clock.advanceTo(persona.epoch)
+    if (!snapshot) {
+      // The clock only ticks on advance — fire the opening day by hand so the
+      // first history month gets its month-start events (rent due, fees).
+      if (this.clock.today < persona.epoch) {
+        this.tick(this.clock.today, this.clock.today.endsWith('-01'))
+      }
+      this.clock.advanceTo(persona.epoch)
+    }
   }
 
   snapshot(): WorldSnapshot {
