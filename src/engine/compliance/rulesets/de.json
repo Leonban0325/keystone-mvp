@@ -1,0 +1,36 @@
+{
+  "jurisdiction": "DE",
+  "version": "2026.1",
+  "source": "Bürgerliches Gesetzbuch (BGB) §551",
+  "rules": [
+    {
+      "id": "DE-KAUTION-CAP",
+      "check": "deposit_cap",
+      "severity": "violation",
+      "legal_ref": "BGB §551 Abs. 1",
+      "message": "Kaution exceeds three months' Kaltmiete",
+      "params": {
+        "unfurnishedMonths": 3,
+        "furnishedMonths": 3,
+        "basis": "rent_excl_charges"
+      },
+      "remediation": "refund_excess"
+    },
+    {
+      "id": "DE-KAUTION-INSTALMENTS",
+      "check": "instalment_right",
+      "severity": "violation",
+      "legal_ref": "BGB §551 Abs. 2",
+      "message": "Tenant may pay the Kaution in three monthly instalments — a lump sum cannot be demanded",
+      "params": {}
+    },
+    {
+      "id": "DE-KAUTION-INTEREST",
+      "check": "tenant_interest",
+      "severity": "violation",
+      "legal_ref": "BGB §551 Abs. 3 (insolvenzfeste Anlage, Zinsen stehen dem Mieter zu)",
+      "message": "Deposit must be held segregated and remunerated — interest belongs to the tenant",
+      "params": { "required": true }
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "jurisdiction": "ES",
+  "version": "2026.1",
+  "source": "Ley 29/1994 de Arrendamientos Urbanos (LAU) + regional fianza decrees",
+  "rules": [
+    {
+      "id": "ES-FIANZA-CAP",
+      "check": "deposit_cap",
+      "severity": "violation",
+      "legal_ref": "LAU, art. 36.1",
+      "message": "Fianza exceeds one month's rent for residential lets",
+      "params": {
+        "unfurnishedMonths": 1,
+        "furnishedMonths": 1,
+        "basis": "rent_excl_charges"
+      },
+      "remediation": "refund_excess"
+    },
+    {
+      "id": "ES-FIANZA-LODGE",
+      "check": "lodgement_required",
+      "severity": "warning",
+      "legal_ref": "LAU, art. 36.1 + disposición adicional 3ª (regional lodgement)",
+      "message": "Fianza must be lodged with the regional deposit agency — certificate missing",
+      "params": {}
+    },
+    {
+      "id": "ES-FIANZA-RETURN",
+      "check": "return_deadline",
+      "severity": "violation",
+      "legal_ref": "LAU, art. 36.4 (legal interest after one month)",
+      "message": "Fianza return: legal interest accrues one month after key handback",
+      "params": {
+        "monthsConforming": 1,
+        "monthsNonConforming": 1
+      }
+    },
+    {
+      "id": "ES-FIANZA-INTEREST",
+      "check": "tenant_interest",
+      "severity": "info",
+      "legal_ref": "LAU, art. 36 (no remuneration during tenancy; lodged with region)",
+      "message": "No tenant interest during tenancy; fianza is lodged, not floated",
+      "params": { "required": false }
+    }
+  ]
+}

@@ -148,8 +148,9 @@ Never block the UI on it; 6s timeout. The pitch works fully offline.
 4. Money journal + Leases + AI wizard with fallback
 5. Savings + Reports + Card + demo panel + rate-slider failsafe
 6. Polish pass against design tokens; `?demo=clean`; README with the 3-minute demo script
+7. **Personas & segment demos** (Addendum A — `docs/CLIENT-PERSONAS.md`): persona seed modules for A1–A3 / B1–B3 / C1–C3, login-style persona picker + demo-panel quick switch, UI-only RBAC by role (`owner`, `property_manager`, `institution`, `partner`), OwnerRollupTable + RentRollImportWizard (B1), LenderPack (B3), PartnerConsole (C1), WhiteLabelTheme (B2), BranchMap (C2). B1 and C1 are the must-work personas; the rest must at least load with seeded data.
 
-**Acceptance:** `npm test` green (invariants + statutory packs) · full flow works with network disabled · dashboard numbers reconcile to €172/unit · one-click remediation posts visible ledger events · rate slider triggers failsafe below threshold.
+**Acceptance:** `npm test` green (invariants + statutory packs) · full flow works with network disabled · dashboard numbers reconcile to €172/unit · one-click remediation posts visible ledger events · rate slider triggers failsafe below threshold · **persona switcher works (reset journal → load persona seed → set role → apply theme) · B1 demo end-to-end: 42-owner roll-up, drill-down, CSV rent-roll import committing ledger onboarding events, 7% manager-fee waterfall · C1 demo end-to-end: Partner Console with API keys, webhook delivery log, rev-share dashboard, 60,000→4,200 activation funnel · switching back to A1 still reconciles to €172/unit.**
 
 ---
 
