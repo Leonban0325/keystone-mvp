@@ -4,6 +4,7 @@ import { formatDate } from './format'
 import { Badge } from './components'
 import { Role } from '../engine/seed/types'
 import DemoPanel from './DemoPanel'
+import CommandBar from './CommandBar'
 import Dashboard from './screens/Dashboard'
 import Compliance from './screens/Compliance'
 import Money from './screens/Money'
@@ -112,6 +113,7 @@ export default function Shell() {
             </button>
           </div>
           <div className="flex items-center gap-2">
+            <CommandBar />
             <Badge tone="ink">{persona.role.replace('_', ' ')}</Badge>
             {!demoClean && <Badge tone="grey">Simulated rails</Badge>}
             <Badge tone="green">KYC verified</Badge>

@@ -174,6 +174,17 @@ export function buildB1Haussmann(): PersonaSeed {
   late.moveOutDate = '2026-05-05'
   late.edlConforming = true
 
+  // Arrears aging strip: R-failing collections staggered across the buckets
+  // (April fails → 61–90d, May → 31–60d, June → 0–30d at the July epoch).
+  const forceRFrom: Record<string, string> = {
+    [leases[10].id]: '2026-04-01',
+    [leases[60].id]: '2026-04-01',
+    [leases[120].id]: '2026-05-01',
+    [leases[200].id]: '2026-05-01',
+    [leases[300].id]: '2026-06-01',
+    [leases[420].id]: '2026-06-01',
+  }
+
   return {
     id: 'b1-haussmann',
     segment: 'B',
@@ -182,7 +193,7 @@ export function buildB1Haussmann(): PersonaSeed {
     subtitle: '850 units · 42 owner clients · 11 staff · Paris',
     pricingTier: 'enterprise',
     epoch: EPOCH,
-    historyFrom: '2026-06-01',
+    historyFrom: '2026-04-01',
     entities,
     properties,
     leases,
@@ -190,12 +201,13 @@ export function buildB1Haussmann(): PersonaSeed {
       leases,
       properties,
       reservesPerUnitCents: 200_000,
-      openingDate: '2026-05-20',
+      openingDate: '2026-03-20',
       operatingCents: 10_000_000,
     }),
     cardMonthlySpendCents: 1_800_000,
     managerFeePct: 0.07,
     managerEntityId: manager.id,
+    forceRFrom,
     storyTags: { kyc: 'verified', teamSeats: '11' },
   }
 }

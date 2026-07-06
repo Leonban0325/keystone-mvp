@@ -1,14 +1,19 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useApp } from '../store'
 import { eur } from '../format'
 import { Button, Card } from '../components'
 import { addMonths } from '../../engine/compliance/dates'
 
 export default function Reports() {
-  const { world, rev } = useApp()
+  const { world, rev, focus, setFocus } = useApp()
   void rev
   const activeLeases = world.state.leases.filter((l) => !l.moveOutDate)
-  const [leaseId, setLeaseId] = useState(activeLeases[0]?.id ?? '')
+  // Cmd-K deep link: tenant → their quittance, pre-selected.
+  const [leaseId, setLeaseId] = useState(focus?.leaseId ?? activeLeases[0]?.id ?? '')
+  useEffect(() => {
+    if (focus) setFocus(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const lastMonth = addMonths(world.today.slice(0, 8) + '01', -1)
   const [month, setMonth] = useState(lastMonth.slice(0, 7))
 
