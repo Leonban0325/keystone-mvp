@@ -1,7 +1,8 @@
-import { ReactNode } from 'react'
+import { ReactNode, useState } from 'react'
 import { useApp, Screen } from './store'
 import { formatDate } from './format'
 import { Badge } from './components'
+import DemoPanel from './DemoPanel'
 import Dashboard from './screens/Dashboard'
 import Compliance from './screens/Compliance'
 import Money from './screens/Money'
@@ -33,6 +34,7 @@ const SCREENS: Record<string, () => ReactNode> = {
 export default function Shell() {
   const { screen, setScreen, world, rev, demoClean, mutate } = useApp()
   void rev
+  const [panelOpen, setPanelOpen] = useState(false)
 
   return (
     <div className="flex min-h-screen">
@@ -79,10 +81,20 @@ export default function Shell() {
           <div className="flex items-center gap-2">
             {!demoClean && <Badge tone="grey">Simulated rails</Badge>}
             <Badge tone="green">KYC verified</Badge>
+            {!demoClean && (
+              <button
+                onClick={() => setPanelOpen(!panelOpen)}
+                title="Demo controls"
+                className="ml-1 text-lg text-greyx hover:text-ink"
+              >
+                ⚙
+              </button>
+            )}
           </div>
         </header>
         <main className="px-8 py-6">{SCREENS[screen]?.() ?? <Dashboard />}</main>
       </div>
+      {panelOpen && !demoClean && <DemoPanel onClose={() => setPanelOpen(false)} />}
     </div>
   )
 }
