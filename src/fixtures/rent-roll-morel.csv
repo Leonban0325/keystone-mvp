@@ -1,0 +1,41 @@
+owner,property,city,jurisdiction,rent_eur,charges_eur,deposit_eur,tenant,furnished,start_date
+Cabinet Morel,52 rue de Lagny,Paris 20e,FR,1110,111,1110,Bruno Blanc,false,2026-05-01
+Cabinet Morel,9 rue Vitruve,Paris 20e,FR,820,82,820,Gaëlle Roche,false,2026-01-01
+Cabinet Morel,32 rue de Ménilmontant,Paris 20e,FR,1250,125,1250,Samir Legrand,false,2026-01-01
+Cabinet Morel,30 rue de Lagny,Paris 20e,FR,1420,142,2840,Thomas Roche,true,2026-05-01
+Cabinet Morel,30 rue des Pyrénées,Paris 20e,FR,1440,144,1440,Samir Chevalier,false,2026-03-01
+Cabinet Morel,17 boulevard Davout,Paris 20e,FR,1230,123,2460,Karim Vincent,true,2026-06-01
+Cabinet Morel,75 rue de Lagny,Paris 20e,FR,930,93,1860,Gaëlle Francois,true,2026-01-01
+Cabinet Morel,74 rue des Pyrénées,Paris 20e,FR,1400,140,1400,Valérie Andre,false,2026-04-01
+Cabinet Morel,42 rue des Haies,Paris 20e,FR,1380,138,1380,Thomas Garcia,false,2026-03-01
+Cabinet Morel,25 rue des Maraîchers,Paris 20e,FR,1080,108,2160,Henri Blanc,true,2026-05-01
+Cabinet Morel,45 rue des Maraîchers,Paris 20e,FR,1080,108,1080,Pauline Lambert,false,2026-05-01
+Cabinet Morel,55 rue de Bagnolet,Paris 20e,FR,790,79,1580,Laure Chevalier,true,2026-04-01
+Cabinet Morel,87 rue de Ménilmontant,Paris 20e,FR,1230,123,2460,Samir Muller,true,2026-03-01
+Cabinet Morel,78 rue des Haies,Paris 20e,FR,1130,113,1130,Thomas Garcia,false,2026-01-01
+Cabinet Morel,62 rue des Maraîchers,Paris 20e,FR,810,81,810,Céline Roche,false,2026-06-01
+Cabinet Morel,89 rue des Haies,Paris 20e,FR,1090,109,1090,Karim Martinez,false,2026-06-01
+Cabinet Morel,61 rue de la Réunion,Paris 20e,FR,1140,114,2280,Farid Lefevre,true,2026-01-01
+Cabinet Morel,38 rue de Bagnolet,Paris 20e,FR,1330,133,2660,Henri Martinez,true,2026-04-01
+Cabinet Morel,59 rue Planchat,Paris 20e,FR,1330,133,2660,Samir Dupuis,true,2026-02-01
+Cabinet Morel,37 rue des Maraîchers,Paris 20e,FR,1250,125,1250,Olivier Francois,false,2026-06-01
+Cabinet Morel,21 rue de Ménilmontant,Paris 20e,FR,1180,118,1180,Farid Chevalier,false,2026-02-01
+Cabinet Morel,77 rue de Bagnolet,Paris 20e,FR,990,99,1980,Iris Lambert,true,2026-01-01
+Cabinet Morel,49 boulevard Davout,Paris 20e,FR,880,88,880,Thomas Bonnet,false,2026-02-01
+Cabinet Morel,85 rue de Lagny,Paris 20e,FR,1350,135,1350,Bruno Garcia,false,2026-06-01
+Cabinet Morel,53 rue Planchat,Paris 20e,FR,1410,141,1410,David Fontaine,false,2026-06-01
+Cabinet Morel,10 rue Saint-Blaise,Paris 20e,FR,1210,121,2420,Pauline Faure,true,2026-01-01
+Cabinet Morel,15 rue des Pyrénées,Paris 20e,FR,1130,113,1130,Thomas Chevalier,false,2026-05-01
+Cabinet Morel,80 rue des Pyrénées,Paris 20e,FR,820,82,820,Céline Andre,false,2026-05-01
+Cabinet Morel,34 rue de la Réunion,Paris 20e,FR,1180,118,2360,Valérie Francois,true,2026-04-01
+Cabinet Morel,64 rue des Haies,Paris 20e,FR,850,85,1700,Quentin Fontaine,true,2026-03-01
+Cabinet Morel,45 rue des Maraîchers,Paris 20e,FR,800,80,1600,Iris Fontaine,true,2026-06-01
+Cabinet Morel,28 rue Vitruve,Paris 20e,FR,900,90,900,Marc Chevalier,false,2026-06-01
+Cabinet Morel,69 rue des Orteaux,Paris 20e,FR,1390,139,1390,Céline Dupuis,false,2026-05-01
+Cabinet Morel,47 rue Saint-Blaise,Paris 20e,FR,1160,116,1160,Samir Vincent,false,2026-05-01
+Cabinet Morel,80 rue Saint-Blaise,Paris 20e,FR,1120,112,1120,Henri Martinez,false,2026-06-01
+Cabinet Morel,65 rue de la Réunion,Paris 20e,FR,990,99,1980,Alice Petit,true,2026-03-01
+Cabinet Morel,79 rue de la Réunion,Paris 20e,FR,1300,130,2600,Pauline Francois,true,2026-03-01
+Cabinet Morel,31 rue des Haies,Paris 20e,FR,800,80,1600,Gaëlle Bonnet,true,2026-02-01
+Cabinet Morel,80 rue des Pyrénées,Paris 20e,FR,1310,131,1310,Quentin Francois,false,2026-06-01
+Cabinet Morel,17 rue Planchat,Paris 20e,FR,800,80,800,Gaëlle Fontaine,false,2026-02-01

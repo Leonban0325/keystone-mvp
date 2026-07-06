@@ -7,7 +7,8 @@ import { personaIds, buildPersona } from '../engine/seed/personas'
 
 /** Demo control panel — the gear. Hidden entirely under ?demo=clean. */
 export default function DemoPanel(props: { onClose: () => void }) {
-  const { world, rev, mutate, resetSeed, switchPersona, personaId } = useApp()
+  const { world, rev, mutate, resetSeed, switchPersona, personaId, whiteLabel, setWhiteLabel } =
+    useApp()
   void rev
   const [forceRLease, setForceRLease] = useState(world.state.leases[0]?.id ?? '')
   const dfr = world.state.dfr
@@ -132,6 +133,22 @@ export default function DemoPanel(props: { onClose: () => void }) {
           })}
         </div>
       </section>
+
+      {world.state.persona.themeOverride && (
+        <section className="mb-6">
+          <div className="mb-2 text-[11px] uppercase tracking-[0.14em] text-greyx">
+            White-label theme
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={whiteLabel}
+              onChange={(e) => setWhiteLabel(e.target.checked)}
+            />
+            {world.state.persona.themeOverride.name} brand skin — same app, one click
+          </label>
+        </section>
+      )}
 
       <section>
         <Button onClick={resetSeed}>Reset demo to seed</Button>

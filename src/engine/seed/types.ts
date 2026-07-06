@@ -42,6 +42,26 @@ export type DunningStage =
 export type Role = 'owner' | 'property_manager' | 'institution' | 'partner'
 export type Segment = 'A' | 'B' | 'C'
 
+export interface PartnerData {
+  apiKeys?: { label: string; key: string; created: string }[]
+  funnel?: { eligible: number; activated: number; curve: { month: string; activated: number }[] }
+  revShare?: { partnerSharePct: number; perUnitAnnualCents: number; activatedUnits: number }
+  webhookSeed?: { event: string; endpoint: string }[]
+  branches?: { name: string; x: number; y: number; live: boolean; units: number; importPct?: number }[]
+  referral?: { referred: number; onboarded: number; balancesLandedCents: number; collarNote: string }
+  affinityNote?: string
+}
+
+export interface LenderPackData {
+  assetLabel: string
+  loanCents: number
+  valueCents: number
+  debtServiceAnnualCents: number
+  covenants: { dscrMin: number; ltvMax: number }
+  occupancy: { occupied: number; total: number }
+  epc: Record<string, number>
+}
+
 export interface PersonaSeed {
   id: string
   segment: Segment
@@ -50,6 +70,17 @@ export interface PersonaSeed {
   subtitle: string
   pricingTier: PricingTier
   themeOverride?: { brand: string; name: string }
+  /** Manager-of-owners personas: fee % skimmed before owner distribution. */
+  managerFeePct?: number
+  managerEntityId?: string
+  /** Partner-channel personas (segment C): the Partner Console dataset. */
+  partner?: PartnerData
+  /** Institutional personas: refinancing-readiness pack config. */
+  lenderPack?: LenderPackData
+  /** Procurement badges shown on institutional dashboards. */
+  procurement?: string[]
+  /** Money screens watermark (expansion-market preview personas). */
+  watermark?: string
   /** Demo-clock date the persona presents at ("today" on stage). */
   epoch: string
   /**

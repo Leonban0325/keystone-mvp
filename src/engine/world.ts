@@ -17,10 +17,23 @@ import { RULESETS } from './compliance/rulesets'
 import { Finding } from './compliance/types'
 import { mulberry32 } from './seed/rng'
 import { detectOpportunities, SavingsOpportunity } from './savings/detectors'
-import { DunningStage, PersonaSeed, SeedLease } from './seed/types'
+import { DunningStage, Entity, PersonaSeed, Property, SeedLease } from './seed/types'
 
 /** Distribution holdback: kept in owner_payable to cover card spend + arrears. */
 const DISTRIBUTION_BUFFER_CENTS = 500_000
+
+export interface RentRollRow {
+  owner: string
+  property: string
+  city: string
+  jurisdiction: SeedLease['jurisdiction']
+  rentEur: number
+  chargesEur: number
+  depositEur: number
+  tenant: string
+  furnished: boolean
+  startDate: string
+}
 
 export interface PendingCollection {
   intent: JournalEvent
@@ -41,6 +54,9 @@ export interface WorldSnapshot {
   executedSavings: string[]
   /** Leases created through the wizard (persona seed leases come from the builder). */
   extraLeases: SeedLease[]
+  /** Entities/properties added by the rent-roll import wizard. */
+  extraEntities: Entity[]
+  extraProperties: Property[]
 }
 
 export interface WorldState {
@@ -97,6 +113,10 @@ export class DemoWorld {
       rand: mulberry32(0x5eed),
     }
     this.extraLeases = snapshot?.extraLeases ?? []
+    this.extraEntities = snapshot?.extraEntities ?? []
+    this.extraProperties = snapshot?.extraProperties ?? []
+    persona.entities.push(...this.extraEntities)
+    persona.properties.push(...this.extraProperties)
     this.clock = new DemoClock(snapshot?.today ?? persona.historyFrom)
     this.clock.onTick((day, isMonthStart) => this.tick(day, isMonthStart))
     if (!snapshot) this.clock.advanceTo(persona.epoch)
@@ -113,10 +133,14 @@ export class DemoWorld {
       pendingIntents: this.state.pendingIntents,
       executedSavings: [...this.state.executedSavings],
       extraLeases: this.extraLeases,
+      extraEntities: this.extraEntities,
+      extraProperties: this.extraProperties,
     }
   }
 
   private extraLeases: SeedLease[]
+  private extraEntities: Entity[]
+  private extraProperties: Property[]
 
   get journal(): Journal {
     return this.state.journal
@@ -133,6 +157,7 @@ export class DemoWorld {
     }
     resolvePendingCollections(this.state, day)
     if (day.endsWith('-03')) collectRent(this.state, day)
+    if (day.endsWith('-04')) this.postManagerFees(day)
     if (day.endsWith('-12')) postMonthlyCardSpend(this.state, day)
     if (addDays(day, 1).endsWith('-01')) accrueMonthlyYield(this.state, day)
     if (day.endsWith('-05')) this.distributeToOwners(day)
@@ -163,6 +188,98 @@ export class DemoWorld {
         }),
       ],
     })
+  }
+
+  /**
+   * Manager-of-owners personas (B1): the manager's fee is skimmed from each
+   * owner's payable into the manager's own payable — three parties on one
+   * ledger, all flowing through the same distribution waterfall.
+   */
+  private postManagerFees(day: string): void {
+    const { managerFeePct, managerEntityId } = this.state.persona
+    if (!managerFeePct || !managerEntityId) return
+    for (const entity of this.state.persona.entities) {
+      if (entity.id === managerEntityId) continue
+      const gross = activeLeases(this.state, day)
+        .filter((l) => l.entityId === entity.id)
+        .reduce((sum, l) => sum + l.monthlyRentCents + l.chargesCents, 0)
+      const fee = Math.round(gross * managerFeePct)
+      if (fee <= 0) continue
+      this.journal.append({
+        id: this.journal.nextId(),
+        date: day,
+        kind: 'manager_fee',
+        memo: `Management fee ${(managerFeePct * 100).toFixed(0)}% — ${entity.name}`,
+        postings: [
+          posting(ACCOUNTS.ownerPayable(entity.id), 'debit', fee, {
+            entityId: entity.id,
+            category: 'manager_fee',
+          }),
+          posting(ACCOUNTS.ownerPayable(managerEntityId), 'credit', fee, {
+            entityId: managerEntityId,
+            category: 'manager_fee',
+          }),
+        ],
+      })
+    }
+  }
+
+  /** Rent-roll CSV import (B1): onboards a new owner client as ledger events. */
+  importRentRoll(rows: RentRollRow[]): { entityId: string; leases: number } {
+    const ownerName = rows[0]?.owner ?? 'Imported owner'
+    const slug = ownerName.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24)
+    let entity = this.state.persona.entities.find((e) => e.name === ownerName)
+    if (!entity) {
+      entity = { id: `ent-import-${slug}`, name: ownerName, kind: 'sci', country: 'FR' }
+      this.extraEntities.push(entity)
+      this.state.persona.entities.push(entity)
+    }
+    rows.forEach((row, i) => {
+      const propertyId = `imp-${slug}-p${i + 1}`
+      const property: Property = {
+        id: propertyId,
+        entityId: entity!.id,
+        label: row.property,
+        city: row.city,
+        jurisdiction: row.jurisdiction,
+      }
+      this.extraProperties.push(property)
+      this.state.persona.properties.push(property)
+      const lease: SeedLease = {
+        id: `lease-${propertyId}`,
+        propertyId,
+        entityId: entity!.id,
+        jurisdiction: row.jurisdiction,
+        furnished: row.furnished,
+        monthlyRentCents: Math.round(row.rentEur * 100),
+        chargesCents: Math.round(row.chargesEur * 100),
+        depositCents: Math.round(row.depositEur * 100),
+        startDate: row.startDate,
+        tenantNames: [row.tenant],
+      }
+      this.extraLeases.push(lease)
+      this.state.leases.push(lease)
+      if (lease.depositCents > 0) {
+        const dims = {
+          entityId: entity!.id,
+          propertyId,
+          leaseId: lease.id,
+          jurisdiction: row.jurisdiction,
+          category: 'onboarding',
+        }
+        this.journal.append({
+          id: this.journal.nextId(),
+          date: this.today,
+          kind: 'deposit_collected',
+          memo: `Onboarding migration — ${row.property}`,
+          postings: [
+            posting(ACCOUNTS.segregatedDeposits, 'debit', lease.depositCents, dims),
+            posting(ACCOUNTS.depositsHeld(lease.id), 'credit', lease.depositCents, dims),
+          ],
+        })
+      }
+    })
+    return { entityId: entity.id, leases: rows.length }
   }
 
   private distributeToOwners(day: string): void {
@@ -311,7 +428,7 @@ export class DemoWorld {
     const s = this.state
     const balances = totalBalances(s)
     const { ownerRate, keystoneRate, failsafe } = splitYield(s.dfr)
-    const units = s.persona.properties.length
+    const units = Math.max(1, s.persona.properties.length)
     const perUnitTier = failsafe ? PRICING.flatFee : PRICING[s.persona.pricingTier]
 
     const saas = perUnitTier * 12

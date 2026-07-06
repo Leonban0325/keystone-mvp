@@ -38,11 +38,50 @@ export function evaluateLease(
         pushIf(findings, checkReturnDeadline(lease, view, rule, today))
         break
       case 'tenant_interest':
-        // FR/NL/ES: required=false → nothing to check. DE/AT/IT accrual checks arrive with those rulesets.
+        pushIf(findings, checkTenantInterest(lease, view, rule))
+        break
+      case 'instalment_right':
+        pushIf(findings, checkInstalmentRight(lease, rule))
         break
     }
   }
   return findings
+}
+
+/** DE/AT/IT: interest belongs to the tenant — accrual must be running. */
+function checkTenantInterest(lease: Lease, view: ComplianceLedgerView, rule: Rule): Finding | null {
+  if (rule.params.required !== true) return null
+  if (view.depositHeldCents(lease.id) <= 0) return null
+  const accrued = view.tenantInterestCents(lease.id)
+  if (accrued > 0) {
+    return {
+      ruleId: rule.id,
+      leaseId: lease.id,
+      severity: 'info',
+      legalRef: rule.legal_ref,
+      message: `Tenant interest accruing: €${(accrued / 100).toFixed(2)} credited to the tenant to date`,
+      meta: { accruedCents: accrued },
+    }
+  }
+  return {
+    ruleId: rule.id,
+    leaseId: lease.id,
+    severity: rule.severity,
+    legalRef: rule.legal_ref,
+    message: rule.message,
+    meta: { accruedCents: 0 },
+  }
+}
+
+function checkInstalmentRight(lease: Lease, rule: Rule): Finding | null {
+  if (!lease.lumpSumDemanded) return null
+  return {
+    ruleId: rule.id,
+    leaseId: lease.id,
+    severity: rule.severity,
+    legalRef: rule.legal_ref,
+    message: rule.message,
+  }
 }
 
 export function evaluatePortfolio(
@@ -62,6 +101,7 @@ export function evaluatePortfolio(
 export function complianceView(journal: Journal): ComplianceLedgerView {
   return {
     depositHeldCents: (leaseId) => journal.balance(ACCOUNTS.depositsHeld(leaseId)),
+    tenantInterestCents: (leaseId) => journal.balance(ACCOUNTS.tenantInterestAccrued(leaseId)),
   }
 }
 

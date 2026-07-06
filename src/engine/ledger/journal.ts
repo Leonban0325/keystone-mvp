@@ -27,24 +27,27 @@ function bump(map: Map<string, number>, key: string, delta: number) {
 }
 
 export function foldBalances(events: readonly JournalEvent[]): LedgerSnapshot {
-  const raw: RawBalances = new Map()
-  const segregatedDepositCash = new Map<string, number>()
-  const depositLiabilities = new Map<string, number>()
+  const snapshot: LedgerSnapshot = {
+    raw: new Map(),
+    segregatedDepositCash: new Map(),
+    depositLiabilities: new Map(),
+  }
+  for (const event of events) applyEvent(snapshot, event, 1)
+  return snapshot
+}
 
-  for (const event of events) {
-    for (const p of event.postings) {
-      const signed = p.direction === 'debit' ? p.amountCents : -p.amountCents
-      bump(raw, p.account, signed)
-      if (p.account === ACCOUNTS.segregatedDeposits) {
-        bump(segregatedDepositCash, p.dims.jurisdiction!, signed)
-      }
-      if (p.account.startsWith(DEPOSITS_HELD_PREFIX)) {
-        // Liabilities grow with credits.
-        bump(depositLiabilities, p.dims.jurisdiction!, -signed)
-      }
+function applyEvent(snapshot: LedgerSnapshot, event: JournalEvent, sign: 1 | -1): void {
+  for (const p of event.postings) {
+    const signed = (p.direction === 'debit' ? p.amountCents : -p.amountCents) * sign
+    bump(snapshot.raw, p.account, signed)
+    if (p.account === ACCOUNTS.segregatedDeposits) {
+      bump(snapshot.segregatedDepositCash, p.dims.jurisdiction!, signed)
+    }
+    if (p.account.startsWith(DEPOSITS_HELD_PREFIX)) {
+      // Liabilities grow with credits.
+      bump(snapshot.depositLiabilities, p.dims.jurisdiction!, -signed)
     }
   }
-  return { raw, segregatedDepositCash, depositLiabilities }
 }
 
 function validateEvent(event: JournalEvent): void {
@@ -74,30 +77,38 @@ function validateEvent(event: JournalEvent): void {
   }
 }
 
+/** Check invariants only on what this event touched — O(postings), not O(journal). */
 function assertInvariants(snapshot: LedgerSnapshot, event: JournalEvent): void {
-  // No negative segregated cash, ever.
-  for (const [account, value] of snapshot.raw) {
-    if (account.startsWith(SEGREGATED_PREFIX) && value < 0) {
-      throw new LedgerError(
-        `Event ${event.id}: would drive segregated account ${account} negative (${value})`,
-      )
+  for (const p of event.postings) {
+    if (p.account.startsWith(SEGREGATED_PREFIX)) {
+      const value = snapshot.raw.get(p.account) ?? 0
+      if (value < 0) {
+        throw new LedgerError(
+          `Event ${event.id}: would drive segregated account ${p.account} negative (${value})`,
+        )
+      }
     }
-  }
-  // Segregated deposit cash must cover deposit liabilities in every jurisdiction.
-  for (const [jurisdiction, liability] of snapshot.depositLiabilities) {
-    const cash = snapshot.segregatedDepositCash.get(jurisdiction) ?? 0
-    if (cash < liability) {
-      throw new LedgerError(
-        `Event ${event.id}: segregated deposit cash ${cash} < deposit liabilities ${liability} in ${jurisdiction}`,
-      )
+    const jurisdiction = p.dims.jurisdiction
+    if (
+      jurisdiction &&
+      (p.account === ACCOUNTS.segregatedDeposits || p.account.startsWith(DEPOSITS_HELD_PREFIX))
+    ) {
+      const cash = snapshot.segregatedDepositCash.get(jurisdiction) ?? 0
+      const liability = snapshot.depositLiabilities.get(jurisdiction) ?? 0
+      if (cash < liability) {
+        throw new LedgerError(
+          `Event ${event.id}: segregated deposit cash ${cash} < deposit liabilities ${liability} in ${jurisdiction}`,
+        )
+      }
     }
   }
 }
 
 /**
  * Append-only journal. Every append is validated (balanced, integer cents)
- * and the post-commit snapshot is checked against the segregation invariants;
- * a violating event is rejected atomically.
+ * and checked against the segregation invariants; a violating event is
+ * rejected atomically (the applied deltas are rolled back). Balances fold
+ * incrementally so appends stay O(postings) even at enterprise scale.
  */
 export class Journal {
   private events: JournalEvent[] = []
@@ -115,10 +126,14 @@ export class Journal {
 
   append(event: JournalEvent): JournalEvent {
     validateEvent(event)
-    const candidate = foldBalances([...this.events, event])
-    assertInvariants(candidate, event)
+    applyEvent(this.snapshot, event, 1)
+    try {
+      assertInvariants(this.snapshot, event)
+    } catch (error) {
+      applyEvent(this.snapshot, event, -1) // atomic reject
+      throw error
+    }
     this.events.push(event)
-    this.snapshot = candidate
     return event
   }
 

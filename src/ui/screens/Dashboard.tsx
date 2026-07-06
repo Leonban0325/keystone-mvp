@@ -12,6 +12,11 @@ export default function Dashboard() {
   const recurring = savings.filter((o) => o.kind === 'recurring').reduce((s, o) => s + o.savingsCents, 0)
   const oneOff = savings.filter((o) => o.kind === 'one_off').reduce((s, o) => s + o.savingsCents, 0)
   const yieldYtd = ytdOwnerYield(world)
+  // A2's demo point: at the bottom of the market, yield exceeds the fee — cost is negative.
+  const netCost =
+    world.state.persona.storyTags.showNetCostCard === 'true'
+      ? d.revenuePerUnit.saas * d.unitCount - Math.round(d.balancesCents * d.dfr * 0.6)
+      : null
 
   return (
     <div className="space-y-5">
@@ -95,6 +100,14 @@ export default function Dashboard() {
               <Row label="Owner yield / unit / yr" value={eur(d.ownerYieldPerUnitCents)} />
               <Row label="Arrears outstanding" value={eur(d.arrearsCents)} />
               <Row label="Operating float" value={eurCompact(d.operatingCents)} />
+              {netCost !== null && (
+                <tr className="border-t rule font-semibold">
+                  <td className="py-1.5">Effective software cost / yr</td>
+                  <td className={`py-1.5 text-right ${netCost < 0 ? 'text-[#3D6B47]' : ''}`}>
+                    {netCost < 0 ? `${eur(netCost)} — the yield pays for it` : eur(netCost)}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
           <div className="mt-3 text-xs text-greyx">
@@ -102,6 +115,24 @@ export default function Dashboard() {
           </div>
         </Card>
       </div>
+
+      {world.state.persona.procurement && (
+        <Card title="Procurement & assurance">
+          <div className="flex flex-wrap gap-2">
+            {world.state.persona.procurement.map((badge) => (
+              <Badge key={badge} tone="ink">
+                {badge}
+              </Badge>
+            ))}
+          </div>
+          {world.state.persona.storyTags.sampleNote && (
+            <div className="mt-3 text-xs text-greyx">
+              Loaded: {world.state.persona.storyTags.sampleNote} — economics shown at €3,000
+              reserves/unit: durable fees + the savings engine carry the model at low float.
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   )
 }

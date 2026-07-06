@@ -18,12 +18,19 @@ export interface Lease {
   edlConforming?: boolean
   /** ES: regional fianza lodgement certificate id, null/undefined when missing. */
   lodgementCertificate?: string | null
+  /** DE: landlord demanded the Kaution as a lump sum (violates §551 Abs. 2). */
+  lumpSumDemanded?: boolean
   tenantNames: string[]
 }
 
 export type Severity = 'info' | 'warning' | 'violation'
 
-export type CheckKind = 'deposit_cap' | 'lodgement_required' | 'return_deadline' | 'tenant_interest'
+export type CheckKind =
+  | 'deposit_cap'
+  | 'lodgement_required'
+  | 'return_deadline'
+  | 'tenant_interest'
+  | 'instalment_right'
 
 export interface Rule {
   id: string
@@ -65,4 +72,6 @@ export interface Finding {
 export interface ComplianceLedgerView {
   /** Deposit currently held for a lease (liability balance), integer cents. */
   depositHeldCents(leaseId: string): number
+  /** Tenant interest accrued on a lease's deposit, integer cents. */
+  tenantInterestCents(leaseId: string): number
 }

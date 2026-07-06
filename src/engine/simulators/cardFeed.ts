@@ -28,8 +28,16 @@ export function postMonthlyCardSpend(s: WorldState, day: string): void {
   const base = Math.floor(total / props.length)
   let remaining = total
   props.forEach((prop, i) => {
-    const jitter = Math.floor(base * 0.3 * (s.rand() - 0.5))
-    const amount = i === props.length - 1 ? remaining : Math.max(1, base + jitter)
+    const left = props.length - 1 - i
+    let amount: number
+    if (left === 0) {
+      amount = remaining
+    } else {
+      const jitter = Math.floor(base * 0.3 * (s.rand() - 0.5))
+      // Never overdraw what the remaining properties minimally need (1¢ each).
+      amount = Math.max(1, Math.min(base + jitter, remaining - left))
+    }
+    if (amount <= 0) return
     remaining -= amount
     const vendor = pick(s.rand, VENDORS)
     s.journal.append({
