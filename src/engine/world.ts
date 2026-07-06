@@ -39,6 +39,8 @@ export interface WorldSnapshot {
   forceRFrom: [string, string][]
   pendingIntents: PendingCollection[]
   executedSavings: string[]
+  /** Leases created through the wizard (persona seed leases come from the builder). */
+  extraLeases: SeedLease[]
 }
 
 export interface WorldState {
@@ -83,7 +85,7 @@ export class DemoWorld {
   constructor(persona: PersonaSeed, snapshot?: WorldSnapshot) {
     this.state = {
       journal: Journal.fromEvents(snapshot?.events ?? persona.events),
-      leases: persona.leases,
+      leases: [...persona.leases, ...(snapshot?.extraLeases ?? [])],
       persona,
       dfr: snapshot?.dfr ?? BASE_DFR,
       arrearsSince: new Map(snapshot?.arrearsSince ?? []),
@@ -94,6 +96,7 @@ export class DemoWorld {
       executedSavings: new Set(snapshot?.executedSavings ?? []),
       rand: mulberry32(0x5eed),
     }
+    this.extraLeases = snapshot?.extraLeases ?? []
     this.clock = new DemoClock(snapshot?.today ?? persona.historyFrom)
     this.clock.onTick((day, isMonthStart) => this.tick(day, isMonthStart))
     if (!snapshot) this.clock.advanceTo(persona.epoch)
@@ -109,8 +112,11 @@ export class DemoWorld {
       forceRFrom: [...this.state.forceRFrom],
       pendingIntents: this.state.pendingIntents,
       executedSavings: [...this.state.executedSavings],
+      extraLeases: this.extraLeases,
     }
   }
+
+  private extraLeases: SeedLease[]
 
   get journal(): Journal {
     return this.state.journal
@@ -219,6 +225,40 @@ export class DemoWorld {
 
   dunningStage(leaseId: string): DunningStage {
     return deriveDunning(this.state, leaseId, this.today)
+  }
+
+  /** Add a lease created through the wizard; collects its deposit into segregation. */
+  addLease(lease: SeedLease): void {
+    this.extraLeases.push(lease)
+    this.state.leases.push(lease)
+    if (lease.depositCents > 0) {
+      const dims = {
+        entityId: lease.entityId,
+        propertyId: lease.propertyId,
+        leaseId: lease.id,
+        jurisdiction: lease.jurisdiction,
+        category: 'deposit',
+      }
+      this.journal.append({
+        id: this.journal.nextId(),
+        date: this.today,
+        kind: 'deposit_collected',
+        memo: `Deposit — new lease ${lease.id}`,
+        postings: [
+          posting(ACCOUNTS.segregatedDeposits, 'debit', lease.depositCents, dims),
+          posting(ACCOUNTS.depositsHeld(lease.id), 'credit', lease.depositCents, dims),
+        ],
+      })
+    }
+  }
+
+  /** Manually resolve one pending SDD collection (Money screen simulate buttons). */
+  resolvePendingNow(intentId: string, outcome: 'settle' | 'fail'): void {
+    const pending = this.state.pendingIntents.find((p) => p.intent.id === intentId)
+    if (!pending) throw new Error(`No pending collection ${intentId}`)
+    pending.fail = outcome === 'fail'
+    pending.settleOn = this.today
+    resolvePendingCollections(this.state, this.today)
   }
 
   /** Execute a savings opportunity: books the success fee, marks it done. */

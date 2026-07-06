@@ -1,0 +1,22 @@
+{
+  "fields": {
+    "parties": ["Meridian Properties SCI (bailleur)", "Sarah Nguyen (locataire)"],
+    "monthly_rent_excl_charges": 1250,
+    "charges": 125,
+    "deposit_amount": 2500,
+    "furnished": true,
+    "start_date": "2026-08-01",
+    "jurisdiction": "FR",
+    "indexation_clause": true
+  },
+  "confidence": {
+    "parties": 0.98,
+    "monthly_rent_excl_charges": 0.97,
+    "charges": 0.95,
+    "deposit_amount": 0.96,
+    "furnished": 0.99,
+    "start_date": 0.94,
+    "jurisdiction": 0.99,
+    "indexation_clause": 0.92
+  }
+}
