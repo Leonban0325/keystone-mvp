@@ -1,8 +1,9 @@
 import { Journal, posting } from './ledger/journal'
 import { ACCOUNTS, JournalEvent } from './ledger/types'
 import { addDays } from './compliance/dates'
+import { ownerYieldYtdCents, revenueRunRate } from './analytics'
 import { DemoClock } from './simulators/clock'
-import { BASE_DFR, INTERCHANGE_RATE, PRICING, splitYield } from './simulators/economics'
+import { BASE_DFR, PRICING, splitYield } from './simulators/economics'
 import {
   activeLeases,
   collectRent,
@@ -81,9 +82,10 @@ export interface Dashboard {
   operatingCents: number
   arrearsCents: number
   violations: number
-  /** Annualized revenue decomposition, cents per unit. */
+  /** Annualized revenue decomposition, cents per unit — folded from last month's ledger postings (§0). */
   revenuePerUnit: { saas: number; nim: number; interchange: number; total: number }
   ownerYieldPerUnitCents: number
+  ownerYieldYtdCents: number
   noiAnnualCents: number
   pricingMode: 'yield_shared' | 'flat_fee'
   dfr: number
@@ -427,13 +429,18 @@ export class DemoWorld {
   dashboard(): Dashboard {
     const s = this.state
     const balances = totalBalances(s)
-    const { ownerRate, keystoneRate, failsafe } = splitYield(s.dfr)
+    const { ownerRate, failsafe } = splitYield(s.dfr)
     const units = Math.max(1, s.persona.properties.length)
-    const perUnitTier = failsafe ? PRICING.flatFee : PRICING[s.persona.pricingTier]
 
-    const saas = perUnitTier * 12
-    const nim = failsafe ? 0 : Math.round((balances * keystoneRate) / units)
-    const interchange = Math.round((s.persona.cardMonthlySpendCents * 12 * INTERCHANGE_RATE) / units)
+    // §0: revenue decomposition folds from the last complete month's income
+    // postings, annualised — no hard-coded per-unit constants. The failsafe
+    // flip is forward-looking, so SaaS shows the flat rate while it's active.
+    const runRate = revenueRunRate(this)
+    const saas = failsafe
+      ? PRICING.flatFee * 12
+      : Math.round(runRate.saasAnnualCents / units)
+    const nim = failsafe ? 0 : Math.round(runRate.nimAnnualCents / units)
+    const interchange = Math.round(runRate.interchangeAnnualCents / units)
     const annualRent = activeLeases(s, this.today).reduce((sum, l) => sum + l.monthlyRentCents, 0) * 12
 
     return {
@@ -446,6 +453,7 @@ export class DemoWorld {
       violations: this.findings().filter((f) => f.severity === 'violation').length,
       revenuePerUnit: { saas, nim, interchange, total: saas + nim + interchange },
       ownerYieldPerUnitCents: Math.round((balances * ownerRate) / units),
+      ownerYieldYtdCents: ownerYieldYtdCents(this),
       noiAnnualCents: annualRent - s.persona.cardMonthlySpendCents * 12,
       pricingMode: failsafe ? 'flat_fee' : 'yield_shared',
       dfr: s.dfr,
