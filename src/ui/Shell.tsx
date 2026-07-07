@@ -3,7 +3,7 @@ import { useApp, Screen } from './store'
 import { formatDate } from './format'
 import { Badge, ToastHost, ViewErrorBoundary } from './components'
 import { buildNotices, Notice } from './notifications'
-import { Role } from '../engine/seed/types'
+import { NAV_BY_ROLE } from './rbac'
 import DemoPanel from './DemoPanel'
 import CommandBar from './CommandBar'
 import Dashboard from './screens/Dashboard'
@@ -34,14 +34,6 @@ const NAV_ITEMS: Record<Screen, string> = {
   system: 'System',
 }
 
-/** UI-only RBAC: the engine never changes — that IS the demo point. */
-const NAV_BY_ROLE: Record<Role, Screen[]> = {
-  owner: ['dashboard', 'leases', 'compliance', 'money', 'rails', 'card', 'savings', 'reports'],
-  property_manager: ['dashboard', 'rollup', 'leases', 'compliance', 'money', 'rails', 'card', 'savings', 'reports'],
-  institution: ['dashboard', 'lenderpack', 'leases', 'compliance', 'money', 'rails', 'card', 'reports'],
-  partner: ['partner'],
-}
-
 const SCREENS: Record<Screen, () => ReactNode> = {
   dashboard: () => <Dashboard />,
   rollup: () => <OwnerRollup />,
@@ -61,7 +53,8 @@ const SCREENS: Record<Screen, () => ReactNode> = {
 const WATERMARKED: Screen[] = ['money', 'card', 'savings', 'reports']
 
 export default function Shell() {
-  const { screen, setScreen, world, rev, demoClean, mutate, whiteLabel, dataSource } = useApp()
+  const { screen, setScreen, world, rev, demoClean, mutate, whiteLabel, dataSource, session, logout } =
+    useApp()
   void rev
   const [panelOpen, setPanelOpen] = useState(false)
 
@@ -103,6 +96,20 @@ export default function Shell() {
             </button>
           ))}
         </nav>
+        {/* F §2.3: logout returns to the landing Home; data persists. */}
+        <div className="mt-8 border-t rule pt-4">
+          {session?.email && (
+            <div className="mb-1.5 truncate text-[11px] text-greyx" title={session.email}>
+              {session.email}
+            </div>
+          )}
+          <button
+            onClick={logout}
+            className="text-xs text-greyx underline-offset-2 hover:text-ink hover:underline"
+          >
+            Sign out
+          </button>
+        </div>
       </aside>
 
       <div className="flex-1">

@@ -12,6 +12,7 @@ import { engineStatus } from '../src/engine/savings/detectors'
 import { personaIds } from '../src/engine/seed/personas'
 import { extractHandler } from './ai/extract'
 import { queryHandler } from './ai/query'
+import { findCredential, mintToken, verifyToken } from '../src/access/credentials'
 
 /**
  * Back-end API (Addendum D §3): real services over the persisted curated
@@ -24,6 +25,8 @@ export interface ApiRequest {
   path: string // after /api/
   query: Record<string, string>
   body?: unknown
+  /** Demo session token (Authorization: Bearer …) — scopes persona reads (F §3). */
+  token?: string
 }
 
 export interface ApiResponse {
@@ -47,12 +50,38 @@ export const ENDPOINTS = [
   'POST /api/admin/reset                   — regenerate the curated dataset (idempotent seed)',
   'POST /api/extract                       — AI lease extraction (key server-side, canned fallback)',
   'POST /api/query                         — natural-language portfolio query (canned fallback)',
+  'POST /api/session                       — demo sign-in: credentials → persona-scoped token',
   'GET  /api/system?persona=…             — open the hood: counts, rulesets, recent events',
 ]
 
 export async function route(req: ApiRequest): Promise<ApiResponse> {
-  const db = await getDb()
   const persona = req.query.persona ?? (req.body as { personaId?: string } | undefined)?.personaId
+
+  // RBAC (Addendum F §3): a session token is scoped to ONE persona. When a
+  // token accompanies the request, any attempt to read or mutate another
+  // persona's dataset is refused server-side — the scoping is real, not
+  // cosmetic. (Token-less requests stay allowed for curl/dev/System tooling.)
+  // Runs BEFORE any database work: unauthorized requests never touch data.
+  if (req.token && persona) {
+    const scoped = verifyToken(req.token)
+    if (!scoped) return error(401, 'invalid session token')
+    if (scoped !== persona) {
+      return error(403, `session is scoped to ${scoped} — cannot access ${persona}`)
+    }
+  }
+
+  if (req.method === 'POST' && req.path === 'session') {
+    const body = req.body as { email?: string; password?: string } | undefined
+    const credential = findCredential(body?.email ?? '', body?.password ?? '')
+    if (!credential) return error(401, 'unknown demo credential')
+    return json({
+      token: mintToken(credential.personaId),
+      personaId: credential.personaId,
+      role: credential.role,
+    })
+  }
+
+  const db = await getDb()
 
   switch (`${req.method} ${req.path}`) {
     case 'GET health': {

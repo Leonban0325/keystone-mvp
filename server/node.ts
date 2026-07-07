@@ -15,6 +15,9 @@ export async function readApiRequest(req: IncomingMessage): Promise<ApiRequest> 
   const query: Record<string, string> = {}
   url.searchParams.forEach((value, key) => (query[key] = value))
 
+  const auth = req.headers.authorization
+  const token = auth?.startsWith('Bearer ') ? auth.slice(7) : undefined
+
   let body: unknown
   if (req.method === 'POST' || req.method === 'PUT') {
     const chunks: Buffer[] = []
@@ -28,7 +31,7 @@ export async function readApiRequest(req: IncomingMessage): Promise<ApiRequest> 
       }
     }
   }
-  return { method: req.method ?? 'GET', path, query, body }
+  return { method: req.method ?? 'GET', path, query, body, token }
 }
 
 export function writeApiResponse(res: ServerResponse, out: ApiResponse): void {
