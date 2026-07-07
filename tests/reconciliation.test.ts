@@ -3,7 +3,7 @@ import { DemoWorld } from '../src/engine/world'
 import { buildPersona, personaIds } from '../src/engine/seed/personas'
 import { ACCOUNTS } from '../src/engine/ledger/types'
 import { addMonths } from '../src/engine/compliance/dates'
-import { monthlyFlows, moneyRollup, ownerYieldYtdCents, searchAll } from '../src/engine/analytics'
+import { complianceTrackRecord, monthlyFlows, moneyRollup, ownerYieldYtdCents, searchAll } from '../src/engine/analytics'
 
 /**
  * Addendum B §0: every headline dashboard figure must fold from ledger
@@ -17,9 +17,12 @@ describe('§0 dashboard ↔ ledger reconciliation (every persona)', () => {
       const d = world.dashboard()
 
       // Decomposition must sum to the per-unit total shown — exactly.
-      expect(d.revenuePerUnit.saas + d.revenuePerUnit.nim + d.revenuePerUnit.interchange).toBe(
-        d.revenuePerUnit.total,
-      )
+      expect(
+        d.revenuePerUnit.saas +
+          d.revenuePerUnit.nim +
+          d.revenuePerUnit.interchange +
+          d.revenuePerUnit.savings,
+      ).toBe(d.revenuePerUnit.total)
 
       // Balances = segregated cash accounts, straight off the journal.
       expect(d.balancesCents).toBe(
@@ -27,28 +30,25 @@ describe('§0 dashboard ↔ ledger reconciliation (every persona)', () => {
           world.journal.balance(ACCOUNTS.segregatedReserves),
       )
 
-      // Revenue components = last complete month's income postings × 12.
-      const lastMonth = addMonths(world.today.slice(0, 8) + '01', -1).slice(0, 7)
-      let saasMonth = 0
-      let nimMonth = 0
-      let interchangeMonth = 0
+      // Revenue components = trailing-12-month income postings (signed fold).
+      const windowEnd = world.today.slice(0, 8) + '01'
+      const windowStart = addMonths(windowEnd, -12)
+      const folds = { saas: 0, nim: 0, interchange: 0, savings: 0 }
       for (const event of world.journal.all) {
-        if (!event.date.startsWith(lastMonth)) continue
+        if (event.date < windowStart || event.date >= windowEnd) continue
         for (const p of event.postings) {
-          if (p.direction !== 'credit') continue
-          if (p.account === 'income:fees:saas') saasMonth += p.amountCents
-          if (p.account === 'income:nim_share') nimMonth += p.amountCents
-          if (p.account === 'income:fees:interchange') interchangeMonth += p.amountCents
+          const signed = p.direction === 'credit' ? p.amountCents : -p.amountCents
+          if (p.account === 'income:fees:saas') folds.saas += signed
+          if (p.account === 'income:nim_share') folds.nim += signed
+          if (p.account === 'income:fees:interchange') folds.interchange += signed
+          if (p.account === 'income:fees:savings_share') folds.savings += signed
         }
       }
       const units = Math.max(1, world.state.persona.properties.length)
-      expect(Math.abs(d.revenuePerUnit.saas * units - saasMonth * 12)).toBeLessThanOrEqual(
-        100 * units,
-      )
-      expect(Math.abs(d.revenuePerUnit.nim * units - nimMonth * 12)).toBeLessThanOrEqual(100 * units)
-      expect(
-        Math.abs(d.revenuePerUnit.interchange * units - interchangeMonth * 12),
-      ).toBeLessThanOrEqual(100 * units)
+      expect(Math.abs(d.revenuePerUnit.saas * units - folds.saas)).toBeLessThanOrEqual(units)
+      expect(Math.abs(d.revenuePerUnit.nim * units - folds.nim)).toBeLessThanOrEqual(units)
+      expect(Math.abs(d.revenuePerUnit.interchange * units - folds.interchange)).toBeLessThanOrEqual(units)
+      expect(Math.abs(d.revenuePerUnit.savings * units - folds.savings)).toBeLessThanOrEqual(units)
 
       // Owner yield YTD = accrued owner_payable yield postings since Jan 1.
       let ytd = 0
@@ -66,12 +66,26 @@ describe('§0 dashboard ↔ ledger reconciliation (every persona)', () => {
     })
   }
 
-  it('A1 still shows the deck numbers, now as ledger folds', () => {
-    const d = new DemoWorld(buildPersona('a1-meridian')).dashboard()
-    expect(d.revenuePerUnit.saas).toBe(8_400)
-    expect(d.revenuePerUnit.nim).toBe(7_594)
-    expect(d.revenuePerUnit.interchange).toBe(1_200)
-    expect(d.revenuePerUnit.total).toBe(17_194)
+  it('per-segment revenue/unit matches the Revenue-by-Client model figures (§2.4, ±€1)', () => {
+    const targets: Record<string, number> = {
+      'a2-sofia': 17_700, // small landlord — €177
+      'a1-meridian': 24_900, // mid landlord — €249
+      'b1-haussmann': 20_300, // property manager — €203
+      'b2-rijnland': 12_400, // housing association — €124
+      'b3-ibervia': 26_400, // institutional BTR — €264
+    }
+    for (const [id, target] of Object.entries(targets)) {
+      const d = new DemoWorld(buildPersona(id)).dashboard()
+      expect(Math.abs(d.revenuePerUnit.total - target), id).toBeLessThanOrEqual(100)
+    }
+  })
+
+  it('the curated year carries a compliance track record (§2.2)', () => {
+    const b1 = new DemoWorld(buildPersona('b1-haussmann'))
+    const record = complianceTrackRecord(b1)
+    expect(record.resolved).toBeGreaterThanOrEqual(14)
+    expect(record.avgDays).toBeGreaterThan(1)
+    expect(record.avgDays).toBeLessThan(5)
   })
 })
 

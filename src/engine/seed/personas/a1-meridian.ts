@@ -1,5 +1,6 @@
 import { Journal, posting } from '../../ledger/journal'
 import { ACCOUNTS, Jurisdiction } from '../../ledger/types'
+import { DFR_PATH } from '../../simulators/economics'
 import { Entity, PersonaSeed, Property, SeedLease } from '../types'
 
 /**
@@ -155,15 +156,32 @@ export function buildA1Meridian(): PersonaSeed {
     role: 'owner',
     name: ENTITY.name,
     subtitle: 'M. Laurent · 10 units · Paris, Lyon, Amsterdam, Barcelona',
-    pricingTier: 'basic',
+    // Mid-landlord segment (Addendum D): Pro tier, €249/unit/yr as a ledger fold.
+    pricingTier: 'pro',
     epoch: '2026-07-01',
-    historyFrom: '2026-04-01',
+    historyFrom: '2025-07-01',
     entities: [ENTITY],
     properties,
     leases,
     events: [...journal.all],
     forceRFrom: { 'lease-es-p2': '2026-05-01' },
     cardMonthlySpendCents: 333_300,
+    dfrPath: DFR_PATH,
+    revenueTargetCents: 24_900,
+    // The curated year (§2.2): findings raised AND remediated, an indexation
+    // applied, savings executed in prior months. The tax appeal stays OPEN —
+    // it is the live +€8,400 demo moment.
+    storyActions: [
+      { date: '2025-09-04', type: 'deposit_topup', leaseId: 'lease-fr-p1', amountCents: 20_000 },
+      { date: '2025-09-06', type: 'refund_excess', leaseId: 'lease-fr-p1', amountCents: 20_000, raisedOn: '2025-09-04' },
+      { date: '2025-09-01', type: 'set_rent', leaseId: 'lease-fr-p2', rentCents: 153_000 },
+      { date: '2025-11-10', type: 'deposit_topup', leaseId: 'lease-fr-p4', amountCents: 30_000 },
+      { date: '2025-11-13', type: 'refund_excess', leaseId: 'lease-fr-p4', amountCents: 30_000, raisedOn: '2025-11-10' },
+      { date: '2026-02-16', type: 'deposit_topup', leaseId: 'lease-fr-p5', amountCents: 25_000 },
+      { date: '2026-02-18', type: 'refund_excess', leaseId: 'lease-fr-p5', amountCents: 25_000, raisedOn: '2026-02-16' },
+      { date: '2026-03-20', type: 'execute_savings', opportunityId: 'insurance-requote', propertyId: 'fr-p1', feeCents: 3_625 },
+      { date: '2026-04-14', type: 'execute_savings', opportunityId: 'utility-switch', propertyId: 'fr-p1', feeCents: 5_193 },
+    ],
     storyTags: {
       kyc: 'verified',
       defaultPersona: 'true',

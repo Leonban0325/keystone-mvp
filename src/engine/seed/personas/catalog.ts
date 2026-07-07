@@ -1,15 +1,16 @@
 import { mulberry32, intBetween, pick } from '../rng'
-import { Entity, PersonaSeed, Property, SeedLease } from '../types'
-import { entityOf, generateUnits, openingEvents, tenantName, STREETS } from './portfolio'
+import { DFR_PATH } from '../../simulators/economics'
+import { Entity, PersonaSeed, Property, SeedLease, StoryAction } from '../types'
+import { entityOf, generateUnits, openingEvents, statutoryDepositCents, tenantName, STREETS } from './portfolio'
 
 /**
  * Persona catalog — Addendum A (docs/CLIENT-PERSONAS.md).
  * Every builder is deterministic (fixed RNG seed per persona).
- * A1 (Meridian) lives in a1-meridian.ts and must keep reconciling to €172/unit.
+ * A1 (Meridian) lives in a1-meridian.ts; segment revenue targets are Addendum D §2.4.
  */
 
 const EPOCH = '2026-07-01'
-const TWO_MONTHS_BACK = '2026-05-01'
+const YEAR_BACK = '2025-07-01'
 
 // ── A2 · Sofia Jansen — the solo starter ────────────────────────────────────
 
@@ -36,12 +37,7 @@ export function buildA2Sofia(): PersonaSeed {
       startDate: '2025-03-01',
       tenantNames: tenants,
       coTenants: coTenantSplit
-        ? tenants.map((name, i) => ({
-            name,
-            shareCents: rentCents / tenants.length,
-            // Story: one co-tenant pays late — dunning targets only them.
-            paysLate: i === 2,
-          }))
+        ? tenants.map((name) => ({ name, shareCents: rentCents / tenants.length }))
         : undefined,
     },
   })
@@ -60,7 +56,13 @@ export function buildA2Sofia(): PersonaSeed {
     subtitle: 'Solo starter · 3 units · Rotterdam · flat-share native',
     pricingTier: 'basic',
     epoch: EPOCH,
-    historyFrom: TWO_MONTHS_BACK,
+    historyFrom: YEAR_BACK,
+    dfrPath: DFR_PATH,
+    revenueTargetCents: 17_700,
+    storyActions: [
+      // The late co-tenant story starts two months before the epoch.
+      { date: '2026-05-01', type: 'set_pays_late', leaseId: 'lease-sj-p3', coTenantIndex: 2 },
+    ],
     entities: [entity],
     properties: units.map((u) => u.property),
     leases: units.map((u) => u.lease),
@@ -68,7 +70,7 @@ export function buildA2Sofia(): PersonaSeed {
       leases: units.map((u) => u.lease),
       properties: units.map((u) => u.property),
       reservesPerUnitCents: 500_000, // €15,000 reserves; deposits €6,500 → €21,500 total
-      openingDate: '2026-04-15',
+      openingDate: '2025-06-15',
       operatingCents: 500_000,
     }),
     cardMonthlySpendCents: 42_000,
@@ -102,7 +104,8 @@ export function buildA3Falkenrath(): PersonaSeed {
     subtitle: '22 units · München · coming market preview — §551 BGB already speaks',
     pricingTier: 'basic',
     epoch: EPOCH,
-    historyFrom: TWO_MONTHS_BACK,
+    historyFrom: YEAR_BACK,
+    dfrPath: DFR_PATH,
     entities: [entity],
     properties,
     leases,
@@ -110,7 +113,7 @@ export function buildA3Falkenrath(): PersonaSeed {
       leases,
       properties,
       reservesPerUnitCents: 0,
-      openingDate: '2026-04-15',
+      openingDate: '2025-06-15',
     }),
     cardMonthlySpendCents: 0,
     watermark: 'Germany — expansion tranche · rails pending, engine live',
@@ -185,6 +188,51 @@ export function buildB1Haussmann(): PersonaSeed {
     [leases[420].id]: '2026-06-01',
   }
 
+  // The curated year (§2.2): 14 findings raised AND remediated ("14 resolved,
+  // avg ~2.3 days"), savings executed in prior months, one vacancy + re-let
+  // with the deposit returned inside its clock.
+  const storyActions: StoryAction[] = []
+  const cycleLeases = [15, 45, 75, 110, 150, 190, 230, 270, 310, 350, 390, 430, 470, 510]
+  cycleLeases.forEach((index, i) => {
+    const month = 8 + (i % 11) // spread across 2025-08 .. 2026-06, some months twice
+    const y = month <= 12 ? 2025 : 2026
+    const m = String(((month - 1) % 12) + 1).padStart(2, '0')
+    const day = String(6 + (i % 3) * 7).padStart(2, '0')
+    const raised = `${y}-${m}-${day}`
+    const resolved = `${y}-${m}-${String(Number(day) + 2 + (i % 2)).padStart(2, '0')}`
+    if (resolved >= EPOCH) return
+    const amount = (15 + (i % 5) * 6) * 1000
+    storyActions.push(
+      { date: raised, type: 'deposit_topup', leaseId: leases[index].id, amountCents: amount },
+      { date: resolved, type: 'refund_excess', leaseId: leases[index].id, amountCents: amount, raisedOn: raised },
+    )
+  })
+  // Vacancy: unit vacated Dec 31, deposit back Jan 8 (inside the clock), re-let in March.
+  const vacated = leases[70]
+  storyActions.push(
+    { date: '2025-12-31', type: 'move_out', leaseId: vacated.id },
+    { date: '2026-01-08', type: 'return_deposit', leaseId: vacated.id },
+    {
+      date: '2026-03-01',
+      type: 'new_lease',
+      lease: {
+        id: `${vacated.propertyId}-relet`,
+        propertyId: vacated.propertyId,
+        entityId: vacated.entityId,
+        jurisdiction: vacated.jurisdiction,
+        furnished: vacated.furnished,
+        monthlyRentCents: vacated.monthlyRentCents + 3_000,
+        chargesCents: vacated.chargesCents,
+        depositCents: statutoryDepositCents(vacated.jurisdiction, vacated.furnished, vacated.monthlyRentCents + 3_000),
+        startDate: '2026-03-01',
+        tenantNames: ['Louise Charpentier'],
+      },
+    },
+    // Savings executed in prior months → the NOI bridge shows accumulation.
+    { date: '2026-03-12', type: 'execute_savings', opportunityId: 'insurance-b1-haussmann', propertyId: properties[0].id, feeCents: 32_625 },
+    { date: '2026-04-10', type: 'execute_savings', opportunityId: 'utility-b1-haussmann', propertyId: properties[0].id, feeCents: 73_500 },
+  )
+
   return {
     id: 'b1-haussmann',
     segment: 'B',
@@ -193,7 +241,10 @@ export function buildB1Haussmann(): PersonaSeed {
     subtitle: '850 units · 42 owner clients · 11 staff · Paris',
     pricingTier: 'enterprise',
     epoch: EPOCH,
-    historyFrom: '2026-04-01',
+    historyFrom: YEAR_BACK,
+    dfrPath: DFR_PATH,
+    revenueTargetCents: 20_300,
+    storyActions,
     entities,
     properties,
     leases,
@@ -201,7 +252,7 @@ export function buildB1Haussmann(): PersonaSeed {
       leases,
       properties,
       reservesPerUnitCents: 200_000,
-      openingDate: '2026-03-20',
+      openingDate: '2025-06-20',
       operatingCents: 10_000_000,
     }),
     cardMonthlySpendCents: 1_800_000,
@@ -234,6 +285,18 @@ export function buildB2Rijnland(): PersonaSeed {
   // Social housing: one month deposit, not two.
   for (const lease of leases) lease.depositCents = lease.monthlyRentCents
 
+  // Turnover over the year: move-outs with deposits returned inside the clock,
+  // plus one social-mode arrears case near the epoch.
+  const storyActions: StoryAction[] = [
+    { date: '2025-10-31', type: 'move_out', leaseId: leases[10].id },
+    { date: '2025-11-08', type: 'return_deposit', leaseId: leases[10].id },
+    { date: '2026-01-31', type: 'move_out', leaseId: leases[50].id },
+    { date: '2026-02-06', type: 'return_deposit', leaseId: leases[50].id },
+    { date: '2026-04-30', type: 'move_out', leaseId: leases[90].id },
+    { date: '2026-05-09', type: 'return_deposit', leaseId: leases[90].id },
+    { date: '2026-06-01', type: 'force_r', leaseId: leases[130].id },
+  ]
+
   return {
     id: 'b2-rijnland',
     segment: 'B',
@@ -242,7 +305,10 @@ export function buildB2Rijnland(): PersonaSeed {
     subtitle: 'Woningcorporatie · 12,000 units (400-unit sampled slice) · Leiden',
     pricingTier: 'enterprise',
     epoch: EPOCH,
-    historyFrom: '2026-06-01',
+    historyFrom: YEAR_BACK,
+    dfrPath: DFR_PATH,
+    revenueTargetCents: 12_400,
+    storyActions,
     entities: [entity],
     properties,
     leases,
@@ -250,7 +316,7 @@ export function buildB2Rijnland(): PersonaSeed {
       leases,
       properties,
       reservesPerUnitCents: 300_000, // €3,000/unit — the low-float honesty story
-      openingDate: '2026-05-20',
+      openingDate: '2025-06-20',
       operatingCents: 5_000_000,
     }),
     cardMonthlySpendCents: 900_000,
@@ -273,7 +339,7 @@ export function buildB3Ibervia(): PersonaSeed {
     cities: [{ city: 'Madrid — Torre Ibervia', jurisdiction: 'ES' }],
     rentRangeCents: [100_000, 150_000],
     furnishedShare: 0.6,
-    startYears: [2023, 2026],
+    startYears: [2023, 2025],
     lodgementPrefix: 'IVIMA-2024',
   })
   // Story: 2 of 180 fianza lodgement certificates missing.
@@ -294,7 +360,12 @@ export function buildB3Ibervia(): PersonaSeed {
     subtitle: 'Listed BTR · 2,400 units across 6 assets (one 180-unit asset loaded) · Madrid',
     pricingTier: 'enterprise',
     epoch: EPOCH,
-    historyFrom: '2026-06-01',
+    historyFrom: YEAR_BACK,
+    dfrPath: DFR_PATH,
+    revenueTargetCents: 26_400,
+    storyActions: [
+      { date: '2026-02-20', type: 'execute_savings', opportunityId: 'insurance-b3-ibervia', propertyId: 'ib-p1', feeCents: 40_000 },
+    ],
     entities: [entity],
     properties,
     leases,
@@ -302,7 +373,7 @@ export function buildB3Ibervia(): PersonaSeed {
       leases,
       properties,
       reservesPerUnitCents: 150_000,
-      openingDate: '2026-05-20',
+      openingDate: '2025-06-20',
       operatingCents: 8_000_000,
     }),
     cardMonthlySpendCents: 700_000,

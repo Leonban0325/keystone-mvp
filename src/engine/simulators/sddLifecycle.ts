@@ -96,7 +96,9 @@ export function deriveDunning(s: WorldState, leaseId: string, today: string): Du
 }
 
 export function activeLeases(s: WorldState, day: string): SeedLease[] {
-  return s.leases.filter((l) => !l.moveOutDate || l.moveOutDate > day)
+  return s.leases.filter(
+    (l) => l.startDate <= day && (!l.moveOutDate || l.moveOutDate > day),
+  )
 }
 
 function dims(lease: SeedLease) {

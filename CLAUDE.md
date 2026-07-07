@@ -22,7 +22,7 @@ Everything that would touch the outside world (bank, EMI, SEPA, card processor, 
 - **Zustand** for state; **all domain logic in plain TS modules** under `/src/engine` (framework-free, unit-testable)
 - **SQLite is NOT needed** — the ledger is an in-memory event journal, serialized to `localStorage` so state survives refresh; a "Reset demo" button restores the seed
 - **Vitest** for the engine tests (rulesets + ledger invariants — these tests ARE part of the demo story: "our statutory test packs")
-- **Anthropic API** via `fetch` for document extraction ONLY, key from `VITE_ANTHROPIC_KEY` env; if absent or the call fails, fall back silently to the bundled canned extraction (`/src/fixtures/extracted-lease.json`)
+- **Anthropic API** for document extraction + natural-language query ONLY, called **server-side** from `/api/*` functions with the key in a non-`VITE_` env var (`ANTHROPIC_API_KEY` — never `VITE_`-prefixed, which would bundle it into public client JS); if absent or the call fails, fall back silently to the bundled canned extraction (`/src/fixtures/extracted-lease.json`) — see Addendum D (`docs/PHASE-10.md`)
 
 ### Design tokens (match the pitch deck)
 ```
@@ -110,7 +110,7 @@ Deterministic generator (fixed seed). The canonical landlord:
   3. One NL lease with **move-out in 10 demo-days** → return clock counting; advancing the clock past deadline shows FR-style penalty logic on a FR lease variant
   4. One lease **2 months in arrears** → dunning FSM mid-flight
   5. One lease with **indexation window opening** next demo-month
-- At the base rate (2.25%) the dashboard must show **≈€171–172 revenue/unit/yr** decomposition and owner yield ≈€169 — the deck and the demo must agree.
+- At the base rate (2.25%) the dashboard must show **≈€171–172 revenue/unit/yr** decomposition and owner yield ≈€169 — the deck and the demo must agree. *(Superseded by Addendum D §2.4: revenue/unit is a trailing-12-month ledger fold reconciling to the per-segment model figures — A1, mid-size segment on the pro tier, shows €249; the €172 figure was the basic-tier decomposition.)*
 
 ---
 
@@ -127,14 +127,18 @@ Deterministic generator (fixed seed). The canonical landlord:
 
 ---
 
-## 6. Anthropic API integration (the only real network call)
+## 6. Anthropic API integration (the only real external call — server-side since Phase 10)
 
 ```ts
-// src/ai/extract.ts — POST https://api.anthropic.com/v1/messages
-// model: claude-sonnet-4-6, system prompt: "Extract lease fields as JSON only:
+// server/ai/extract.ts — POST https://api.anthropic.com/v1/messages
+// model: claude-sonnet-4-6, key from process.env.ANTHROPIC_API_KEY (server-only).
+// Browser → POST /api/extract → serverless function → Anthropic; the key
+// never reaches the client. system prompt: "Extract lease fields as JSON only:
 // {parties, monthly_rent_excl_charges, charges, deposit_amount, furnished,
 //  start_date, jurisdiction, indexation_clause} — no prose."
 // try/catch → on ANY failure return fixtures/extracted-lease.json marked source:"canned"
+// server/ai/query.ts — same posture: AI translates a question into the
+// PortfolioQuery DSL (src/engine/queryDsl.ts); deterministic code executes it.
 ```
 Never block the UI on it; 6s timeout. The pitch works fully offline.
 
@@ -150,8 +154,10 @@ Never block the UI on it; 6s timeout. The pitch works fully offline.
 6. Polish pass against design tokens; `?demo=clean`; README with the 3-minute demo script
 7. **Personas & segment demos** (Addendum A — `docs/CLIENT-PERSONAS.md`): persona seed modules for A1–A3 / B1–B3 / C1–C3, login-style persona picker + demo-panel quick switch, UI-only RBAC by role (`owner`, `property_manager`, `institution`, `partner`), OwnerRollupTable + RentRollImportWizard (B1), LenderPack (B3), PartnerConsole (C1), WhiteLabelTheme (B2), BranchMap (C2). B1 and C1 are the must-work personas; the rest must at least load with seeded data.
 8. **Dashboard depth, analytics & navigation** (Addendum B — `docs/DASHBOARD-DEPTH.md`): §0 ledger reconciliation first (every headline figure folds from journal events, per-persona test within €1), role-specific dashboard widget grids (arrears aging, payout run, lease-events calendar, cash-flow timeline, NOI bridge, covenant tiles), Recharts cash-flow + NOI-bridge hero charts, five-detector savings engine with status panel/confidence/logic trails, Money roll-up levels (portfolio → owner → property → lease), Cmd-K global search with deep links, analytics-first Card & Spend with outlier flags feeding the savings engine, compliance-colored SVG property map with detail cards.
+9. *(skipped — numbering follows Addendum D, which names the back-end phase 10 and defers front-end polish to phase 11)*
+10. **Curated-dataset back-end & AI roles** (Addendum D — `docs/PHASE-10.md`): the generator runs ONCE at seed time (`npm run seed`, idempotent) and persists each persona's 12-month journal to Postgres (`DATABASE_URL`) or embedded file-backed PGlite (zero accounts, offline); a framework-free back-end API (`server/handlers.ts`, served by Vite middleware in dev and a Vercel function `api/[...path].ts` deployed) exposes dataset/portfolio/compliance/savings/rollup/FEC/events/extract/query/system; the front-end queries the API and POSTs mutations (ledger invariants re-enforced server-side, optimistic concurrency), falling back silently to the in-browser engine when the API is unreachable; historical DFR path + per-segment revenue targets as ledger folds (€177/€249/€203/€124/€264); AI extraction (§4.1) and natural-language portfolio query (§4.2 — Cmd-K "Ask" mode over the PortfolioQuery DSL) run server-side with `ANTHROPIC_API_KEY`, canned fallback; `/system` audit view (§6, hidden in `?demo=clean`). Front-end polish deferred to Phase 11.
 
-**Acceptance:** `npm test` green (invariants + statutory packs) · full flow works with network disabled · dashboard numbers reconcile to €172/unit · one-click remediation posts visible ledger events · rate slider triggers failsafe below threshold · **persona switcher works (reset journal → load persona seed → set role → apply theme) · B1 demo end-to-end: 42-owner roll-up, drill-down, CSV rent-roll import committing ledger onboarding events, 7% manager-fee waterfall · C1 demo end-to-end: Partner Console with API keys, webhook delivery log, rev-share dashboard, 60,000→4,200 activation funnel · switching back to A1 still reconciles to €172/unit · **dashboard reconciles to ledger folds (per-persona test, ±€1) · no empty dashboard region for any persona · savings shows ≥5 seeded opportunities with logic trails · Money has a working portfolio/owner roll-up · Cmd-K resolves a tenant by name.**
+**Acceptance:** `npm test` green (invariants + statutory packs) · full flow works with network disabled · dashboard numbers reconcile to the per-segment model figures (€249/unit for A1 since Addendum D; originally €172 on the basic tier) · one-click remediation posts visible ledger events · rate slider triggers failsafe below threshold · **persona switcher works (reset journal → load persona seed → set role → apply theme) · B1 demo end-to-end: 42-owner roll-up, drill-down, CSV rent-roll import committing ledger onboarding events, 7% manager-fee waterfall · C1 demo end-to-end: Partner Console with API keys, webhook delivery log, rev-share dashboard, 60,000→4,200 activation funnel · switching back to A1 still reconciles to its segment figure · **dashboard reconciles to ledger folds (per-persona test, ±€1) · no empty dashboard region for any persona · savings shows ≥5 seeded opportunities with logic trails · Money has a working portfolio/owner roll-up · Cmd-K resolves a tenant by name · **Phase 10: curated 12-month dataset persisted per persona (`npm run seed`) · front-end generates nothing when the API is up — it queries, and mutations POST events that the server re-validates (unbalanced → 422, stale baseSeq → 409) · per-segment revenue/unit reconciles to the model as ledger folds (±€1, tested) · extraction and NL query run via serverless functions with the key server-side only, invisible canned fallback with network off · Cmd-K Ask answers ≥3 seeded questions over the dataset · `/system` shows endpoints, persisted journal counts, ruleset versions and live reconciliation, and is hidden in `?demo=clean` · full core demo runs with the AI API disabled.**
 
 ---
 

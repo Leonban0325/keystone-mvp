@@ -5,21 +5,36 @@ six-regime compliance engine and the event-sourced double-entry ledger are genui
 implemented; every rail that would touch the outside world (bank, SEPA, cards, KYC,
 tariff feeds) is a deterministic simulator driven by seed data and a demo clock.
 
-The only real network call is the optional Anthropic API for lease extraction — with a
-mandatory canned fallback, so **the pitch works fully offline**.
+Since Phase 10 (Addendum D — `docs/PHASE-10.md`) the demo has a **real back-end**: the
+deterministic generator runs once at seed time and persists a curated 12-month journal
+per persona to Postgres (or embedded PGlite); the front-end queries an API and POSTs
+mutations, which the server re-validates against the ledger invariants. The only real
+external call is the optional Anthropic API for lease extraction and natural-language
+query — **server-side only**, with a mandatory canned fallback, so **the pitch works
+fully offline**.
 
 ## Run
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
-npm test           # ledger invariants + statutory packs — part of the demo story
+npm run seed       # generate + persist the curated datasets (PGlite, .data/ — idempotent)
+npm run dev        # http://localhost:5173 — UI + /api/* via Vite middleware
+npm test           # ledger invariants + statutory packs + reconciliation — part of the demo story
 ```
 
-- `?demo=clean` hides the dev badges and the demo control panel for the actual pitch.
-- Optional: put `VITE_ANTHROPIC_KEY=sk-ant-…` in `.env` to run lease extraction live;
-  without it (or on any failure) the wizard silently uses the bundled canned extraction.
-- State persists to `localStorage`; "Reset demo to seed" in the gear panel restores it.
+- `?demo=clean` hides the dev badges, the demo control panel, and the System screen
+  for the actual pitch.
+- Optional env (`.env`, server-side names only — see `.env.example`):
+  `ANTHROPIC_API_KEY` turns on live extraction + Cmd-K Ask (never `VITE_`-prefixed —
+  the key stays inside the `/api/*` functions and never reaches the browser);
+  `DATABASE_URL` targets hosted Postgres (Neon/Supabase) instead of PGlite.
+- If the API is unreachable (static hosting, network off on stage) the same engine
+  runs in-browser from the deterministic seed — identical numbers, silently.
+- "Reset demo to seed" in the gear panel restores both the browser state and the
+  persisted dataset.
+- Deploy: push to Vercel — `vercel.json` builds the SPA and serves `api/[...path].ts`
+  as the serverless back-end. Recommended posture: public link with no AI key
+  (canned fallback, nothing to leak); the presentation laptop runs the live key.
 
 ## The three-minute demo script
 
@@ -53,8 +68,8 @@ End: "One ledger, one rules engine, three go-to-market motions."
 | Quantity | Value |
 |---|---|
 | Balances under management (A1) | €125,000 (€23.2k deposits + €101.8k reserves) |
-| Revenue/unit/yr @ 2.25% DFR | €171.94 = SaaS €84 + NIM €75.94 + interchange €12 |
-| Owner yield | 60% of DFR → €168.75/unit/yr |
+| Revenue/unit/yr, trailing 12 months | per-segment ledger folds: €177 (small) / €249 (mid, A1) / €203 (PM) / €124 (housing) / €264 (BTR) |
+| Owner yield | 60% of DFR → €168.75/unit/yr at the 2.25% base rate |
 | Keystone take at base rate | 60.75 bps (bank floor 12 bps, current 29.25 bps) |
 | Failsafe | fires below 25 bps take (≈0.93% DFR) → flat-fee mode |
 
@@ -67,10 +82,16 @@ src/engine/indexation    IRL/CPI/ISTAT tables + revision calculator
 src/engine/simulators    demo clock, SDD lifecycle + dunning FSM, yield accrual, card feed
 src/engine/savings       detectors over simulated tariff/tax/grant feeds
 src/engine/seed          fixed-seed persona generators (A1 default)
-src/ai/extract.ts        the one real network call, with canned fallback
-src/ui                   screens & demo panel
-tests/                   vitest: ledger invariants + statutory packs
+src/engine/queryDsl.ts   PortfolioQuery DSL — AI writes the WHERE clause, code executes it
+src/api/client.ts        front-end API client (dataset, events, extract, query, system)
+src/ai/extract.ts        extraction via /api/extract, with canned fallback
+src/ui                   screens & demo panel (incl. the /system audit view)
+server/                  db adapter (Postgres/PGlite), store, /api router, AI endpoints
+scripts/seed.ts          npm run seed — persist the curated datasets
+api/[...path].ts         Vercel serverless wrapper around the same router
+tests/                   vitest: ledger invariants + statutory packs + reconciliation
 ```
 
-See `CLAUDE.md` for the full build specification and `docs/CLIENT-PERSONAS.md` for the
-persona addendum (Phase 7).
+See `CLAUDE.md` for the full build specification, `docs/CLIENT-PERSONAS.md` for the
+persona addendum (Phase 7), `docs/DASHBOARD-DEPTH.md` for Phase 8, and
+`docs/PHASE-10.md` for the curated-dataset back-end & AI roles (Phase 10).

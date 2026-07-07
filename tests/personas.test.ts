@@ -40,7 +40,7 @@ describe('persona catalog', () => {
     // survives snapshot round-trip
     const revived = new DemoWorld(buildPersona('b1-haussmann'), world.snapshot())
     expect(revived.state.persona.entities.some((e) => e.name === 'Cabinet Morel')).toBe(true)
-    expect(revived.state.leases.length).toBe(852)
+    expect(revived.state.leases.length).toBe(853) // 850 + re-let + 2 imported
   })
 
   it('A3: DE ruleset evaluates — tenant interest accrues, lump-sum demand flagged', () => {
@@ -69,14 +69,13 @@ describe('persona catalog', () => {
     expect(persona.partner?.revShare?.activatedUnits).toBe(4_200)
   })
 
-  it('switching back to A1 still reconciles to €172/unit', () => {
+  it('switching back to A1 still reconciles to €249/unit on €125k balances', () => {
     new DemoWorld(buildPersona('b1-haussmann'))
     new DemoWorld(buildPersona('c1-rentora'))
     const a1 = new DemoWorld(buildPersona('a1-meridian'))
     const d = a1.dashboard()
     expect(d.balancesCents).toBe(12_500_000)
-    expect(d.revenuePerUnit.total).toBeGreaterThanOrEqual(17_100)
-    expect(d.revenuePerUnit.total).toBeLessThanOrEqual(17_200)
+    expect(Math.abs(d.revenuePerUnit.total - 24_900)).toBeLessThanOrEqual(100)
     expect(d.ownerYieldPerUnitCents).toBe(16_875)
   })
 })

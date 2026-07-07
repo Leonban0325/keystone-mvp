@@ -98,6 +98,36 @@ export interface PersonaSeed {
   forceRFrom?: Record<string, string>
   /** Total card spend per month, cents — drives the card feed + interchange. */
   cardMonthlySpendCents: number
+  /**
+   * Curated 12-month story script (Addendum D §2.2): actions the replay
+   * executes on their date — findings raised AND remediated, savings executed
+   * in prior months, indexations applied, vacancy, deposit returns.
+   */
+  storyActions?: StoryAction[]
+  /**
+   * Historical DFR path: month → annual rate, applied on month starts during
+   * replay so yield postings have real month-by-month shape.
+   */
+  dfrPath?: Record<string, number>
+  /**
+   * Segment revenue target (cents/unit/yr) from the model's Revenue-by-Client
+   * tab. After replay, the residual vs the trailing-12-month income fold is
+   * booked as quarterly savings/services success fees — so the target is a
+   * property of the LEDGER, never a display scalar.
+   */
+  revenueTargetCents?: number
   /** Free-form flags the UI reads for story chips. */
   storyTags: Record<string, string>
 }
+
+export type StoryAction =
+  | { date: string; type: 'set_rent'; leaseId: string; rentCents: number; indexBase?: number }
+  | { date: string; type: 'deposit_topup'; leaseId: string; amountCents: number }
+  | { date: string; type: 'refund_excess'; leaseId: string; amountCents: number; raisedOn: string }
+  | { date: string; type: 'return_deposit'; leaseId: string }
+  | { date: string; type: 'move_out'; leaseId: string }
+  | { date: string; type: 'new_lease'; lease: SeedLease }
+  | { date: string; type: 'force_r'; leaseId: string }
+  | { date: string; type: 'clear_r'; leaseId: string }
+  | { date: string; type: 'set_pays_late'; leaseId: string; coTenantIndex: number }
+  | { date: string; type: 'execute_savings'; opportunityId: string; propertyId: string; feeCents: number }
