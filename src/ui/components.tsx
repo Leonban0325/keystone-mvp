@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import { Component, ReactNode, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Severity } from '../engine/compliance/types'
 
 export function Card(props: { title?: ReactNode; children: ReactNode; className?: string }) {
@@ -76,6 +76,177 @@ export function Button(props: {
       {props.children}
     </button>
   )
+}
+
+/**
+ * §2 deliberate empty state — a guided blank, never a panel that reads as a bug.
+ */
+export function EmptyState(props: { title: string; hint?: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="border rule border-dashed px-6 py-8 text-center">
+      <div className="text-sm font-medium">{props.title}</div>
+      {props.hint && <div className="mx-auto mt-1 max-w-sm text-xs text-greyx">{props.hint}</div>}
+      {props.action && <div className="mt-3">{props.action}</div>}
+    </div>
+  )
+}
+
+/** §2 content-shaped loading skeleton (not a spinner). */
+export function Skeleton(props: { lines?: number; className?: string }) {
+  return (
+    <div className={props.className} aria-hidden>
+      {Array.from({ length: props.lines ?? 3 }, (_, i) => (
+        <div key={i} className="skeleton mb-2 h-3" style={{ width: `${88 - i * 14}%` }} />
+      ))}
+    </div>
+  )
+}
+
+/**
+ * §2 confirmation dialog — the four-eyes principle made visible. Rendered
+ * before any money movement or remediation commits.
+ */
+export function ConfirmDialog(props: {
+  open: boolean
+  title: string
+  body: ReactNode
+  confirmLabel?: string
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  useEffect(() => {
+    if (!props.open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') props.onCancel()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [props])
+  if (!props.open) return null
+  return (
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-ink/25"
+      onClick={props.onCancel}
+      role="dialog"
+      aria-modal="true"
+      aria-label={props.title}
+    >
+      <div className="w-full max-w-md border rule bg-paper p-5" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-semibold">{props.title}</h3>
+        <div className="mt-2 text-sm text-greyx">{props.body}</div>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button tone="quiet" onClick={props.onCancel}>
+            Cancel
+          </Button>
+          <Button tone="primary" onClick={props.onConfirm}>
+            {props.confirmLabel ?? 'Confirm'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── §2 toast layer: money actions confirm on (simulated) settlement ──────────
+
+export interface ToastMessage {
+  id: number
+  text: string
+  tone: 'ok' | 'info'
+}
+
+let toastSeq = 0
+let toastList: ToastMessage[] = []
+const toastListeners = new Set<() => void>()
+
+export function toast(text: string, tone: ToastMessage['tone'] = 'ok'): void {
+  const id = ++toastSeq
+  toastList = [...toastList, { id, text, tone }]
+  toastListeners.forEach((fn) => fn())
+  setTimeout(() => {
+    toastList = toastList.filter((t) => t.id !== id)
+    toastListeners.forEach((fn) => fn())
+  }, 3800)
+}
+
+export function ToastHost() {
+  const toasts = useSyncExternalStore(
+    (onChange) => {
+      toastListeners.add(onChange)
+      return () => toastListeners.delete(onChange)
+    },
+    () => toastList,
+  )
+  return (
+    <div className="pointer-events-none fixed bottom-5 right-5 z-50 space-y-2">
+      {toasts.map((t) => (
+        <div
+          key={t.id}
+          className="toast-in border rule bg-paper px-4 py-2 text-sm"
+          role="status"
+        >
+          <span className={`mr-2 inline-block h-2 w-2 rounded-full ${t.tone === 'ok' ? 'bg-[#3D6B47]' : 'bg-brass'}`} />
+          {t.text}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** §3 numbers animate when they change — count-up over ~0.5s, tabular so nothing shifts. */
+export function CountUp(props: { value: number; format: (v: number) => string }) {
+  const [display, setDisplay] = useState(props.value)
+  const fromRef = useRef(props.value)
+  useEffect(() => {
+    const from = fromRef.current
+    const to = props.value
+    if (from === to) return
+    fromRef.current = to
+    const started = performance.now()
+    const duration = 480
+    let raf = 0
+    const step = (now: number) => {
+      const t = Math.min(1, (now - started) / duration)
+      const eased = 1 - (1 - t) ** 3
+      setDisplay(Math.round(from + (to - from) * eased))
+      if (t < 1) raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+  }, [props.value])
+  return <span>{props.format(display)}</span>
+}
+
+/**
+ * §2 error boundary per major view — one component can never white-screen
+ * the demo. Recovery is a plain re-mount.
+ */
+export class ViewErrorBoundary extends Component<
+  { children: ReactNode; label?: string },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null }
+
+  static getDerivedStateFromError(error: Error) {
+    return { error }
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <EmptyState
+          title={`Something broke in ${this.props.label ?? 'this view'}.`}
+          hint={String(this.state.error.message ?? this.state.error)}
+          action={
+            <Button tone="primary" onClick={() => this.setState({ error: null })}>
+              Reload view
+            </Button>
+          }
+        />
+      )
+    }
+    return this.props.children
+  }
 }
 
 /** Compliance status ring: green = clean leases, amber = warnings, red = violations. */

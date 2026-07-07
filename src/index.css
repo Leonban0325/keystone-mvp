@@ -21,3 +21,74 @@ body {
 .rule {
   border-color: var(--hairline);
 }
+
+/* §7 accessibility: a visible, consistent focus ring on every interactive element. */
+:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 1px;
+}
+
+/* §3 micro-interactions — purposeful motion only. */
+@keyframes row-flash {
+  0% {
+    background-color: rgba(185, 138, 47, 0.22);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+.row-flash {
+  animation: row-flash 1.6s ease-out 1;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.toast-in {
+  animation: toast-in 0.18s ease-out 1;
+}
+
+@keyframes rail-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.rail-pulse {
+  animation: rail-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes skeleton-sheen {
+  0% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0.45;
+  }
+}
+.skeleton {
+  background: var(--hairline);
+  animation: skeleton-sheen 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-flash,
+  .toast-in,
+  .rail-pulse,
+  .skeleton {
+    animation: none;
+  }
+}

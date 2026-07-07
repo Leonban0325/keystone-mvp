@@ -46,7 +46,10 @@ npm run verify-realism  # per-persona report: settlement-lag histogram, spend lu
    "Legal by construction." *(45s)*
 3. **Properties & Leases** — New lease → load the sample → AI extracts → confirm the money
    fields (suggest-only). "Deterministic core, probabilistic edges." *(40s)*
-4. **Money** — the journal. "Every euro, dimensioned, double-entry, auditable." *(20s)*
+4. **Money** — the journal. "Every euro, dimensioned, double-entry, auditable." Click any
+   SDD row → **Money rails**: the tripartite flow (virtual IBAN → escrow → partner bank,
+   Keystone beside it — control, not custody) with the two-phase settlement animating over
+   the real ledger postings. *(20s)*
 5. **Savings Engine** — execute the taxe foncière appeal: NOI bridge, asset value +€8,400.
    "The fee buys the account; the savings pay for everything." *(30s)*
 6. **Demo panel** — drag the DFR slider to zero: the failsafe flips pricing to flat-fee,
@@ -94,6 +97,13 @@ api/[...path].ts         Vercel serverless wrapper around the same router
 tests/                   vitest: ledger invariants + statutory packs + reconciliation
 ```
 
+The partner bank shown on the rails views is a single config field —
+`PARTNER_BANK` in `src/config.ts` (currently Deutsche Bank AG) — change it there
+before presenting; nothing else hard-codes a bank name, and every money-movement
+screen keeps its honest "Simulated rails" badge outside `?demo=clean`.
+
 See `CLAUDE.md` for the full build specification, `docs/CLIENT-PERSONAS.md` for the
-persona addendum (Phase 7), `docs/DASHBOARD-DEPTH.md` for Phase 8, and
-`docs/PHASE-10.md` for the curated-dataset back-end & AI roles (Phase 10).
+persona addendum (Phase 7), `docs/DASHBOARD-DEPTH.md` for Phase 8,
+`docs/PHASE-10.md` for the curated-dataset back-end & AI roles (Phase 10),
+`docs/DATA-REALISM.md` for Phase 10.5, and `docs/PHASE-11.md` for the front-end,
+money-rails & production-feel pass (Phase 11).

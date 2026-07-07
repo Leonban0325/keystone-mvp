@@ -1,5 +1,6 @@
 import { useApp } from './store'
 import { Badge } from './components'
+import { eurCompact } from './format'
 import { buildPersona, personaIds } from '../engine/seed/personas'
 import { PRICING } from '../engine/simulators/economics'
 
@@ -43,7 +44,7 @@ export default function PersonaPicker() {
                     </div>
                     <div className="mt-1 text-xs text-greyx">{p.subtitle}</div>
                     <div className="mt-2 text-[11px] text-greyx">
-                      {p.pricingTier} · €{(PRICING[p.pricingTier] / 100).toFixed(0)}/unit/mo
+                      {p.pricingTier} · {eurCompact(PRICING[p.pricingTier])}/unit/mo
                     </div>
                   </button>
                 ))}

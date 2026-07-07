@@ -1,7 +1,9 @@
 import { ReactNode } from 'react'
 import { useApp } from '../store'
 import { eur, eurCompact, formatDate, pct } from '../format'
-import { Badge, Card, Stat, StatusRing } from '../components'
+import { Badge, Card, CountUp, Stat, StatusRing } from '../components'
+import { actionQueue } from '../notifications'
+import { PARTNER_BANK } from '../../config'
 import { CashFlowChart, NoiBridgeChart, TrendLine, CHART_COLORS } from '../charts'
 import {
   arrearsAging,
@@ -41,19 +43,31 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Shared top row */}
+      {/* §4: what needs you today — each row a deep link. */}
+      <ActionQueue />
+
+      {/* Shared top row — §3 count-up on the hero figures. */}
       <div className="grid grid-cols-4 gap-5">
         <Card>
-          <Stat label="NOI (annualised)" value={eurCompact(d.noiAnnualCents)} sub="rent roll − card-routed opex" />
+          <Stat
+            label="NOI (annualised)"
+            value={<CountUp value={d.noiAnnualCents} format={eurCompact} />}
+            sub="rent roll − card-routed opex"
+          />
         </Card>
         <Card>
           <Stat
             label="Balances"
-            value={eurCompact(d.balancesCents)}
+            value={<CountUp value={d.balancesCents} format={eurCompact} />}
             sub={
               <span className="flex items-center gap-2">
                 {eurCompact(d.depositsCashCents)} deposits · {eurCompact(d.reservesCashCents)} reserves{' '}
-                <Badge tone="brass">Segregated</Badge>
+                <span
+                  title={`Segregated client-money accounts at ${PARTNER_BANK.name}. ${PARTNER_BANK.dgsNote}`}
+                  className="cursor-help"
+                >
+                  <Badge tone="brass">Segregated · DGS</Badge>
+                </span>
               </span>
             }
           />
@@ -61,14 +75,19 @@ export default function Dashboard() {
         <Card>
           <Stat
             label="Owner yield YTD"
-            value={eurCompact(d.ownerYieldYtdCents)}
+            value={<CountUp value={d.ownerYieldYtdCents} format={eurCompact} />}
             sub={`accruing at ${pct(d.dfr * 0.6)} (60% of DFR ${pct(d.dfr)})`}
           />
         </Card>
         <Card>
           <Stat
             label="Savings identified"
-            value={`${eurCompact(recurring)}/yr`}
+            value={
+              <span>
+                <CountUp value={recurring} format={eurCompact} />
+                /yr
+              </span>
+            }
             sub={oneOff > 0 ? `+ ${eurCompact(oneOff)} one-off grants` : 'open opportunities'}
           />
         </Card>
@@ -76,6 +95,36 @@ export default function Dashboard() {
 
       {/* Role-specific widget grid */}
       <div className="grid grid-cols-6 gap-5">{widgets}</div>
+    </div>
+  )
+}
+
+/** §4 action-required queue: the 2–4 things this persona must act on today. */
+function ActionQueue() {
+  const { world, rev, setScreen, setFocus } = useApp()
+  void rev
+  const actions = actionQueue(world)
+  if (actions.length === 0) return null
+  return (
+    <div className="border rule border-l-2 border-l-[#B4392E] bg-white/40 px-4 py-2.5">
+      <div className="mb-1.5 text-[10px] uppercase tracking-[0.12em] text-greyx">
+        Needs attention today
+      </div>
+      <div className="flex flex-wrap gap-x-6 gap-y-1">
+        {actions.map((a) => (
+          <button
+            key={a.id}
+            className="text-left text-sm hover:underline"
+            onClick={() => {
+              if (a.focus) setFocus(a.focus)
+              setScreen(a.screen)
+            }}
+          >
+            <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[#B4392E] align-middle" />
+            {a.title} <span className="text-brass">→</span>
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

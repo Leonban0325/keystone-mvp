@@ -1,7 +1,8 @@
-import { ReactNode, useState } from 'react'
+import { ReactNode, useEffect, useRef, useState } from 'react'
 import { useApp, Screen } from './store'
 import { formatDate } from './format'
-import { Badge } from './components'
+import { Badge, ToastHost, ViewErrorBoundary } from './components'
+import { buildNotices, Notice } from './notifications'
 import { Role } from '../engine/seed/types'
 import DemoPanel from './DemoPanel'
 import CommandBar from './CommandBar'
@@ -15,6 +16,7 @@ import Reports from './screens/Reports'
 import OwnerRollup from './screens/OwnerRollup'
 import LenderPack from './screens/LenderPack'
 import PartnerConsole from './screens/PartnerConsole'
+import Rails from './screens/Rails'
 import System from './screens/System'
 
 const NAV_ITEMS: Record<Screen, string> = {
@@ -24,6 +26,7 @@ const NAV_ITEMS: Record<Screen, string> = {
   leases: 'Properties & Leases',
   compliance: 'Deposits & Compliance',
   money: 'Money',
+  rails: 'Money rails',
   card: 'Card & Spend',
   savings: 'Savings Engine',
   reports: 'Reports',
@@ -33,9 +36,9 @@ const NAV_ITEMS: Record<Screen, string> = {
 
 /** UI-only RBAC: the engine never changes — that IS the demo point. */
 const NAV_BY_ROLE: Record<Role, Screen[]> = {
-  owner: ['dashboard', 'leases', 'compliance', 'money', 'card', 'savings', 'reports'],
-  property_manager: ['dashboard', 'rollup', 'leases', 'compliance', 'money', 'card', 'savings', 'reports'],
-  institution: ['dashboard', 'lenderpack', 'leases', 'compliance', 'money', 'card', 'reports'],
+  owner: ['dashboard', 'leases', 'compliance', 'money', 'rails', 'card', 'savings', 'reports'],
+  property_manager: ['dashboard', 'rollup', 'leases', 'compliance', 'money', 'rails', 'card', 'savings', 'reports'],
+  institution: ['dashboard', 'lenderpack', 'leases', 'compliance', 'money', 'rails', 'card', 'reports'],
   partner: ['partner'],
 }
 
@@ -50,6 +53,7 @@ const SCREENS: Record<Screen, () => ReactNode> = {
   savings: () => <Savings />,
   reports: () => <Reports />,
   partner: () => <PartnerConsole />,
+  rails: () => <Rails />,
   system: () => <System />,
 }
 
@@ -57,7 +61,7 @@ const SCREENS: Record<Screen, () => ReactNode> = {
 const WATERMARKED: Screen[] = ['money', 'card', 'savings', 'reports']
 
 export default function Shell() {
-  const { screen, setScreen, world, rev, demoClean, mutate, whiteLabel } = useApp()
+  const { screen, setScreen, world, rev, demoClean, mutate, whiteLabel, dataSource } = useApp()
   void rev
   const [panelOpen, setPanelOpen] = useState(false)
 
@@ -118,9 +122,18 @@ export default function Shell() {
             >
               +1 month
             </button>
+            {!demoClean && (
+              <span
+                className="text-[10px] uppercase tracking-[0.08em] text-greyx"
+                title="Every figure folds from the append-only journal — the audit trail is the architecture."
+              >
+                {dataSource === 'api' ? '⟳ synced · persisted dataset' : '⟳ local engine'}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <CommandBar />
+            <NotificationBell />
             <Badge tone="ink">{persona.role.replace('_', ' ')}</Badge>
             {!demoClean && <Badge tone="grey">Simulated rails</Badge>}
             <Badge tone="green">KYC verified</Badge>
@@ -141,10 +154,88 @@ export default function Shell() {
               {persona.watermark}
             </div>
           )}
-          {SCREENS[screen]?.() ?? <Dashboard />}
+          {/* §2: one component can never white-screen the demo. */}
+          <ViewErrorBoundary key={screen} label={NAV_ITEMS[screen]}>
+            {SCREENS[screen]?.() ?? <Dashboard />}
+          </ViewErrorBoundary>
         </main>
       </div>
       {panelOpen && !demoClean && <DemoPanel onClose={() => setPanelOpen(false)} />}
+      <ToastHost />
+    </div>
+  )
+}
+
+/** §4 notification center: derived live from findings, clocks, arrears and the journal tail. */
+function NotificationBell() {
+  const { world, rev, setScreen, setFocus } = useApp()
+  void rev
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const notices = buildNotices(world)
+  const actionable = notices.filter((n) => n.severity === 'act').length
+
+  useEffect(() => {
+    if (!open) return
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    window.addEventListener('mousedown', onClick)
+    return () => window.removeEventListener('mousedown', onClick)
+  }, [open])
+
+  const go = (notice: Notice) => {
+    setOpen(false)
+    if (notice.focus) setFocus(notice.focus)
+    setScreen(notice.screen)
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(!open)}
+        title="Notifications"
+        aria-label={`Notifications — ${actionable} need action`}
+        className="relative border rule px-2 py-0.5 text-xs text-greyx hover:border-ink hover:text-ink"
+      >
+        ◷ {notices.length}
+        {actionable > 0 && (
+          <span className="absolute -right-1 -top-1 inline-block h-2 w-2 rounded-full bg-[#B4392E]" />
+        )}
+      </button>
+      {open && (
+        <div className="absolute right-0 top-8 z-30 w-96 border rule bg-paper">
+          <div className="border-b rule px-3 py-2 text-[10px] uppercase tracking-[0.1em] text-greyx">
+            What changed · what needs you
+          </div>
+          <div className="max-h-96 overflow-y-auto">
+            {notices.length === 0 && (
+              <div className="px-3 py-4 text-sm text-greyx">All clear — nothing needs attention.</div>
+            )}
+            {notices.map((n) => (
+              <button
+                key={n.id}
+                onClick={() => go(n)}
+                className="block w-full border-b rule px-3 py-2 text-left last:border-b-0 hover:bg-white/60"
+              >
+                <div className="flex items-center gap-2 text-sm">
+                  <span
+                    className={`inline-block h-2 w-2 rounded-full ${
+                      n.severity === 'act'
+                        ? 'bg-[#B4392E]'
+                        : n.severity === 'watch'
+                          ? 'bg-brass'
+                          : 'bg-[#3D6B47]'
+                    }`}
+                  />
+                  <span className="font-medium">{n.title}</span>
+                </div>
+                <div className="mt-0.5 truncate pl-4 text-xs text-greyx">{n.detail}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

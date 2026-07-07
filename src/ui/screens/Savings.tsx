@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useApp } from '../store'
-import { eur, eurCompact } from '../format'
-import { Badge, Button, Card } from '../components'
+import { eur, eurCompact, num } from '../format'
+import { Badge, Button, Card, ConfirmDialog, toast } from '../components'
 import {
   assetValueImpactCents,
   CAP_RATE,
@@ -17,6 +17,7 @@ export default function Savings() {
   void rev
   const [lastExecuted, setLastExecuted] = useState<string | null>(null)
   const [showExecuted, setShowExecuted] = useState(false)
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
 
   const opportunities = world.savingsOpportunities()
   const status = engineStatus(opportunities, world.state.leases.length)
@@ -34,7 +35,7 @@ export default function Savings() {
       <Card>
         <div className="grid grid-cols-6 divide-x rule text-center">
           <StatusCell value={String(status.detectorCount)} label="detectors running" />
-          <StatusCell value={status.leasesScanned.toLocaleString('en-IE')} label="leases scanned" />
+          <StatusCell value={num(status.leasesScanned)} label="leases scanned" />
           <StatusCell value={String(status.opportunities)} label="opportunities" />
           <StatusCell
             value={`${eurCompact(status.identifiedRecurringCents)}/yr`}
@@ -111,15 +112,31 @@ export default function Savings() {
                   {o.executed ? (
                     <Badge tone="green">executed</Badge>
                   ) : (
-                    <Button
-                      tone="primary"
-                      onClick={() => {
-                        mutate((w) => w.executeSavings(o))
-                        setLastExecuted(o.id)
-                      }}
-                    >
-                      Execute
-                    </Button>
+                    <>
+                      <Button tone="primary" onClick={() => setConfirmingId(o.id)}>
+                        Execute
+                      </Button>
+                      {/* §2 confirm before the success fee posts. */}
+                      <ConfirmDialog
+                        open={confirmingId === o.id}
+                        title={`Execute — ${o.label}?`}
+                        body={
+                          <span>
+                            Expected {eurCompact(o.savingsCents)}
+                            {o.kind === 'recurring' ? '/yr' : ' one-off'} · success fee{' '}
+                            {eur(o.successFeeCents)} posts to the ledger on execution.
+                          </span>
+                        }
+                        confirmLabel="Execute"
+                        onCancel={() => setConfirmingId(null)}
+                        onConfirm={() => {
+                          setConfirmingId(null)
+                          mutate((w) => w.executeSavings(o))
+                          setLastExecuted(o.id)
+                          toast(`${o.label} executed — success fee posted.`)
+                        }}
+                      />
+                    </>
                   )}
                 </td>
               </tr>

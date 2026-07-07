@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useApp } from '../store'
-import { eur, eurCompact } from '../format'
+import { eur, eurCompact, eurWhole } from '../format'
 import { Badge, Button, Card } from '../components'
 import { entityBalances } from '../../engine/simulators/yieldAccrual'
 import { RentRollRow } from '../../engine/world'
@@ -296,8 +296,8 @@ function RentRollImportWizard(props: { onDone: () => void }) {
                   <tr key={i} className="border-t rule">
                     <td className="px-2 py-1">{row.property}</td>
                     <td className="px-2 py-1">{row.tenant}</td>
-                    <td className="px-2 py-1 text-right">€{row.rentEur.toFixed(0)}</td>
-                    <td className="px-2 py-1 text-right">€{row.depositEur.toFixed(0)}</td>
+                    <td className="px-2 py-1 text-right">{eurWhole(row.rentEur * 100)}</td>
+                    <td className="px-2 py-1 text-right">{eurWhole(row.depositEur * 100)}</td>
                     <td className="px-2 py-1">
                       {capExceeded(row) && <Badge tone="red">over cap</Badge>}
                     </td>

@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { useApp } from '../store'
 import { eur, formatDate } from '../format'
-import { Badge, Button, Card, SeverityDot } from '../components'
+import { Badge, Button, Card, ConfirmDialog, SeverityDot, toast } from '../components'
 import { Finding } from '../../engine/compliance/types'
 import { RULESETS } from '../../engine/compliance/rulesets'
 import { complianceTrackRecord } from '../../engine/analytics'
@@ -106,6 +107,11 @@ export default function Compliance() {
 function FindingRow(props: { finding: Finding }) {
   const { world, mutate } = useApp()
   const { finding } = props
+  const [confirming, setConfirming] = useState(false)
+  const label =
+    finding.remediation?.action === 'refund_excess'
+      ? `Refund ${eur(finding.remediation.amountCents)}`
+      : finding.remediation?.label
   return (
     <div className="flex items-start justify-between gap-4 py-3">
       <div className="flex items-start gap-3">
@@ -123,11 +129,29 @@ function FindingRow(props: { finding: Finding }) {
         </div>
       </div>
       {finding.remediation && (
-        <Button tone="primary" onClick={() => mutate((w) => w.applyRemediation(finding))}>
-          {finding.remediation.action === 'refund_excess'
-            ? `Refund ${eur(finding.remediation.amountCents)}`
-            : finding.remediation.label}
-        </Button>
+        <>
+          <Button tone="primary" onClick={() => setConfirming(true)}>
+            {label}
+          </Button>
+          {/* §2 four-eyes: money moves only after an explicit confirm. */}
+          <ConfirmDialog
+            open={confirming}
+            title={`${label} — post to the ledger?`}
+            body={
+              <span>
+                {finding.remediation.label} for {leaseLabel(world, finding.leaseId)} under{' '}
+                {finding.legalRef}. The postings commit immediately and the finding re-evaluates.
+              </span>
+            }
+            confirmLabel={label}
+            onCancel={() => setConfirming(false)}
+            onConfirm={() => {
+              setConfirming(false)
+              mutate((w) => w.applyRemediation(finding))
+              toast(`${finding.ruleId} remediated — postings on the ledger.`)
+            }}
+          />
+        </>
       )}
     </div>
   )

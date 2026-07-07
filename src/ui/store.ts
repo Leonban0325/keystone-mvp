@@ -16,6 +16,7 @@ export type Screen =
   | 'partner'
   | 'rollup'
   | 'lenderpack'
+  | 'rails'
   | 'system'
 
 const STORAGE_KEY = 'keystone-demo-v1'
@@ -72,6 +73,8 @@ export interface Focus {
   leaseId?: string
   propertyId?: string
   entityId?: string
+  /** Money → Rails click-through: land pre-focused on this journal event. */
+  eventId?: string
 }
 
 interface AppState {
@@ -164,7 +167,10 @@ export const useApp = create<AppState>((set, get) => {
     focus: null,
     setFocus: (focus) => set({ focus }),
 
-    setScreen: (screen) => set({ screen }),
+    setScreen: (screen) => {
+      window.scrollTo(0, 0) // §3: view changes reset scroll — no mid-page landings
+      set({ screen })
+    },
 
     mutate: (fn) => {
       const { world, rev } = get()
@@ -179,6 +185,7 @@ export const useApp = create<AppState>((set, get) => {
       const world = new DemoWorld(buildPersona(personaId))
       persist(world)
       applyTheme(world, get().whiteLabel)
+      window.scrollTo(0, 0) // §3: clean transition, no stale scroll position
       set({
         world,
         personaId,
@@ -187,6 +194,7 @@ export const useApp = create<AppState>((set, get) => {
         rev: get().rev + 1,
         screen: defaultScreen(world.state.persona.role),
         needsPicker: false,
+        focus: null,
       })
       void hydrateFromApi(personaId)
     },

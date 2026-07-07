@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useApp } from './store'
 import { Badge } from './components'
+import { eurWhole } from './format'
 import { searchAll, SearchHit } from '../engine/analytics'
 import { cannedParse, runQuery, QueryRow } from '../engine/queryDsl'
 import { queryViaApi } from '../api/client'
@@ -257,8 +258,8 @@ export default function CommandBar() {
                       </span>
                     </span>
                     <span className="text-xs tabular-nums text-greyx">
-                      rent €{row.rentEur.toFixed(0)}
-                      {row.arrearsEur > 0 ? ` · arrears €${row.arrearsEur.toFixed(0)}` : ''}
+                      rent {eurWhole(row.rentEur * 100)}
+                      {row.arrearsEur > 0 ? ` · arrears ${eurWhole(row.arrearsEur * 100)}` : ''}
                       {row.daysInArrears != null ? ` · ${row.daysInArrears}d` : ''}
                     </span>
                   </button>
