@@ -413,7 +413,9 @@ export function spendOutliers(world: DemoWorld): SpendOutlier[] {
     const prior = [...byMonth.entries()].filter(([m]) => m < lastMonth).map(([, c]) => c.amount)
     if (prior.length === 0) continue
     const mean = prior.reduce((s, v) => s + v, 0) / prior.length
-    if (mean > 0 && last.amount > 2 * mean) {
+    // Require a stable baseline (≥€50/mo trailing): a property with near-zero
+    // history and one repair is normal lumpiness, not an outlier.
+    if (mean > 5_000 && last.amount > 2 * mean) {
       outliers.push({
         propertyId: pid,
         label: world.state.persona.properties.find((p) => p.id === pid)?.label ?? pid,

@@ -30,6 +30,12 @@ export interface SeedLease extends Lease {
   coTenants?: CoTenant[]
   /** Anniversary month-day for indexation, ISO date of last revision. */
   indexation?: { index: 'IRL' | 'CPI_NL' | 'ISTAT'; baseValue: number; lastRevised: string }
+  /** Due day set at signing (1st/3rd/5th/10th) — derived from the lease id when absent (D2 §2.2). */
+  paymentDay?: number
+  /** Pinned punctuality personality — derived deterministically when absent. */
+  punctuality?: 'early' | 'prompt' | 'slow' | 'chronic'
+  /** Benefit-paid leases (CAF/APL/huurtoeslag): the state portion, always on time (D2 §4). */
+  benefitCents?: number
 }
 
 export type DunningStage =
@@ -116,6 +122,12 @@ export interface PersonaSeed {
    * property of the LEDGER, never a display scalar.
    */
   revenueTargetCents?: number
+  /**
+   * Payment-timing calibration (D2 §7): 'tight' = institutional BTR
+   * (professionally managed, tighter timing), 'social' = housing association
+   * (benefit flows, longer arrears arcs). Default 'standard'.
+   */
+  timingProfile?: 'standard' | 'tight' | 'social'
   /** Free-form flags the UI reads for story chips. */
   storyTags: Record<string, string>
 }
@@ -131,3 +143,5 @@ export type StoryAction =
   | { date: string; type: 'clear_r'; leaseId: string }
   | { date: string; type: 'set_pays_late'; leaseId: string; coTenantIndex: number }
   | { date: string; type: 'execute_savings'; opportunityId: string; propertyId: string; feeCents: number }
+  /** Tenant pays down (part of) the open receivable — arrears arcs (D2 §4). Omit amount to catch up fully. */
+  | { date: string; type: 'catch_up'; leaseId: string; amountCents?: number }
