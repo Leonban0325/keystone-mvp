@@ -26,3 +26,13 @@ export function formatDate(iso: string): string {
 export function pct(rate: number, decimals = 2): string {
   return `${(rate * 100).toFixed(decimals)}%`
 }
+
+/** Plain integer with thousands separators — counts, units, event totals. */
+export function num(n: number): string {
+  return n.toLocaleString('en-IE', { maximumFractionDigits: 0 })
+}
+
+/** Whole-euro display for row-level figures: €1,187 (no cents column noise). */
+export function eurWhole(cents: number): string {
+  return eur(Math.round(cents / 100) * 100, { decimals: 0 })
+}

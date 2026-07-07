@@ -1,10 +1,19 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useApp } from '../store'
 import { eur, eurCompact, formatDate } from '../format'
-import { Badge, Button, Card } from '../components'
+import { Badge, Button, Card, toast } from '../components'
 import { JournalEvent } from '../../engine/ledger/types'
 import { addMonths } from '../../engine/compliance/dates'
 import { moneyRollup, RollupLevel } from '../../engine/analytics'
+
+/** Kinds that depict money movement — these rows click through to the rails screen. */
+const RAIL_KINDS = new Set([
+  'transfer_intent',
+  'transfer_settlement',
+  'transfer_compensation',
+  'deposit_collected',
+  'owner_distribution',
+])
 
 const KIND_LABELS: Record<string, string> = {
   rent_due: 'Rent due',
@@ -33,7 +42,7 @@ interface Crumb {
 }
 
 export default function Money() {
-  const { world, rev, mutate, focus, setFocus } = useApp()
+  const { world, rev, mutate, focus, setFocus, setScreen } = useApp()
   const [kindFilter, setKindFilter] = useState('')
   const [propertyFilter, setPropertyFilter] = useState('')
   const [leaseFilter, setLeaseFilter] = useState('')
@@ -85,6 +94,24 @@ export default function Money() {
   const kinds = [...new Set(world.journal.all.map((e) => e.kind))]
   const pending = world.state.pendingIntents
 
+  // §3: the row that just posted highlights briefly — cause and effect visible.
+  const journalLen = world.journal.all.length
+  const prevLenRef = useRef(journalLen)
+  const newIds = useMemo(() => {
+    const prev = prevLenRef.current
+    prevLenRef.current = journalLen
+    if (journalLen > prev) {
+      return new Set(world.journal.all.slice(prev).map((e) => e.id))
+    }
+    return new Set<string>()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [journalLen])
+
+  const openRails = (event: JournalEvent) => {
+    setFocus({ eventId: event.id })
+    setScreen('rails')
+  }
+
   const drillInto = (rowId: string, childLevel: RollupLevel) => {
     const label = rollupRows.find((r) => r.id === rowId)?.label ?? rowId
     setTrail([...trail, { label, level: childLevel, parentId: rowId === 'portfolio' ? undefined : rowId }])
@@ -92,7 +119,12 @@ export default function Money() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-semibold tracking-tight">Money</h1>
+      <div className="flex items-baseline justify-between">
+        <h1 className="text-xl font-semibold tracking-tight">Money</h1>
+        <Button tone="quiet" onClick={() => setScreen('rails')}>
+          View money rails →
+        </Button>
+      </div>
 
       {/* §4 · roll-up before drill-down */}
       <Card title="Roll-up — the journal folded by dimension">
@@ -193,12 +225,18 @@ export default function Money() {
                         settles {formatDate(p.settleOn)}
                       </span>
                       <Button
-                        onClick={() => mutate((w) => w.resolvePendingNow(p.intent.id, 'settle'))}
+                        onClick={() => {
+                          mutate((w) => w.resolvePendingNow(p.intent.id, 'settle'))
+                          toast('Settled — settlement leg posted and reconciled.')
+                        }}
                       >
                         Settle now
                       </Button>{' '}
                       <Button
-                        onClick={() => mutate((w) => w.resolvePendingNow(p.intent.id, 'fail'))}
+                        onClick={() => {
+                          mutate((w) => w.resolvePendingNow(p.intent.id, 'fail'))
+                          toast('R-transaction — compensating entry posted.', 'info')
+                        }}
                       >
                         Force R
                       </Button>
@@ -260,6 +298,8 @@ export default function Money() {
                 event={event}
                 expanded={expanded === event.id}
                 onToggle={() => setExpanded(expanded === event.id ? null : event.id)}
+                justPosted={newIds.has(event.id)}
+                onRails={RAIL_KINDS.has(event.kind) ? () => openRails(event) : undefined}
               />
             ))}
           </tbody>
@@ -269,14 +309,23 @@ export default function Money() {
   )
 }
 
-function EventRow(props: { event: JournalEvent; expanded: boolean; onToggle: () => void }) {
+function EventRow(props: {
+  event: JournalEvent
+  expanded: boolean
+  onToggle: () => void
+  justPosted?: boolean
+  onRails?: () => void
+}) {
   const { event } = props
   const total = event.postings
     .filter((p) => p.direction === 'debit')
     .reduce((sum, p) => sum + p.amountCents, 0)
   return (
     <>
-      <tr className="cursor-pointer border-t rule hover:bg-white/50" onClick={props.onToggle}>
+      <tr
+        className={`cursor-pointer border-t rule hover:bg-white/50 ${props.justPosted ? 'row-flash' : ''}`}
+        onClick={props.onToggle}
+      >
         <td className="py-1.5 text-greyx">{event.date}</td>
         <td className="py-1.5">
           {KIND_LABELS[event.kind] ?? event.kind}
@@ -287,7 +336,21 @@ function EventRow(props: { event: JournalEvent; expanded: boolean; onToggle: () 
           )}
         </td>
         <td className="py-1.5 text-greyx">{event.memo ?? '—'}</td>
-        <td className="py-1.5 text-right">{eur(total)}</td>
+        <td className="py-1.5 text-right">
+          {eur(total)}
+          {props.onRails && (
+            <button
+              className="ml-2 text-xs text-brass hover:underline"
+              title="Open on the money-rails view"
+              onClick={(e) => {
+                e.stopPropagation()
+                props.onRails!()
+              }}
+            >
+              rails →
+            </button>
+          )}
+        </td>
       </tr>
       {props.expanded && (
         <tr className="border-t rule bg-white/60">

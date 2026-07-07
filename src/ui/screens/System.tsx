@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../store'
-import { Badge } from '../components'
+import { Badge, Skeleton } from '../components'
 import { fetchSystem, SystemInfo } from '../../api/client'
 import { RULESETS } from '../../engine/compliance/rulesets'
-import { eur } from '../format'
+import { eur, num } from '../format'
 
 /**
  * §6 "Open the hood" — the answer to "is this actually built or just a
@@ -155,7 +155,7 @@ export default function System() {
                     <tr key={c.persona_id} className="border-b rule">
                       <td className="py-1">{c.persona_id}</td>
                       <td className="py-1 text-right tabular-nums">
-                        {c.events.toLocaleString('en')} events
+                        {num(c.events)} events
                       </td>
                     </tr>
                   ))}
@@ -163,18 +163,19 @@ export default function System() {
               </table>
             </div>
           </div>
-        ) : (
+        ) : checked ? (
           <p className="text-sm text-greyx">
-            {checked
-              ? 'No back-end answered — running fully in-browser from the deterministic seed. Start it with `npm run dev` (Vite middleware) or deploy the Vercel functions.'
-              : '…'}
+            No back-end answered — running fully in-browser from the deterministic seed. Start it
+            with `npm run dev` (Vite middleware) or deploy the Vercel functions.
           </p>
+        ) : (
+          <Skeleton lines={4} />
         )}
       </section>
 
       <section className="border rule p-4">
         <h2 className="mb-3 text-xs uppercase tracking-[0.1em] text-greyx">
-          Event journal — last 10 of {events.length.toLocaleString('en')}
+          Event journal — last 10 of {num(events.length)}
         </h2>
         <table className="w-full text-sm">
           <thead>

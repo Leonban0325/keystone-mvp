@@ -1,4 +1,5 @@
 import { mulberry32, intBetween, pick } from '../rng'
+import { PARTNER_BANK } from '../../../config'
 import { DFR_PATH } from '../../simulators/economics'
 import { Entity, PersonaSeed, Property, SeedLease, StoryAction } from '../types'
 import { entityOf, generateUnits, openingEvents, statutoryDepositCents, tenantName, STREETS } from './portfolio'
@@ -536,7 +537,8 @@ export function buildC3PartnerBank(): PersonaSeed {
     id: 'c3-partnerbank',
     segment: 'C',
     role: 'partner',
-    name: 'Partner Bank — SME Channel',
+    // §0: the bank name comes from config — one field, set before presenting.
+    name: `${PARTNER_BANK.short} — SME Channel`,
     subtitle: 'The collar partner’s SME arm refers landlord customers',
     pricingTier: 'enterprise',
     epoch: EPOCH,
