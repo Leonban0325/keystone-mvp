@@ -79,7 +79,11 @@ npm run dev
 - `npm install` downloads the toolchain — **needs internet, takes 1–2 min,
   only needed once ever**
 - `npm run dev` starts the demo — leave this Terminal window open while
-  you present
+  you present. It also starts the built-in back-end: on the very first
+  request the app quietly generates and saves its twelve months of history
+  into a small local database (a `.data` folder — no accounts, no internet).
+  Running `npm run seed` once beforehand does the same thing ahead of time
+  so the first click is instant.
 
 Now open your browser at:
 
@@ -144,22 +148,39 @@ name** → e.g. `keystone-demo` → your link becomes
 If the code changes: `npm run build` again, then in Netlify open your site →
 **Deploys** tab → drag the new `dist` folder onto the page. Done.
 
+One note about Netlify Drop: it hosts only the front-end, no back-end. The
+app detects that automatically and runs its engine in the browser instead —
+every number and every screen is identical, so for sharing with judges this
+is completely fine. If you want the *real back-end* on the public link
+(persisted datasets, the live System screen, optional live AI), use Vercel
+below instead.
+
 ### Two cautions for the public link
 
-- **Never put your Anthropic API key into a version you upload.** The key
-  would be visible to anyone. The public site should simply run without a
-  key — the lease wizard then uses its built-in canned extraction, which is
-  exactly what the pitch script uses anyway.
-- Each visitor gets their own private sandbox (state lives in their browser),
-  so judges can click Refund or move the clock without affecting your demo.
+- **Never put your Anthropic API key anywhere a browser can see it.** On
+  Vercel it goes into the server-side environment variable
+  `ANTHROPIC_API_KEY` (Project → Settings → Environment Variables) — the
+  serverless functions use it, the browser never receives it. Simplest and
+  safest: give the public site no key at all — the lease wizard and the Ask
+  bar then use their built-in canned fallbacks, which is exactly what the
+  pitch script uses anyway.
+- Judges can click Refund or move the clock without breaking your demo:
+  the gear panel's **Reset demo to seed** restores both the browser state
+  and the saved dataset.
 
 ### Alternatives (equally fine)
 
 - **Vercel** (<https://vercel.com>): log in with GitHub, "Add New → Project",
   import `keystone-mvp`, set the production branch to
   `claude/focused-albattani-xpv100`, framework preset **Vite**, deploy.
+  This one runs the full back-end too (the `api/` folder deploys as
+  serverless functions automatically — `vercel.json` is already set up).
   Redeploys automatically whenever the code changes — nicer long-term, but
-  requires connecting your GitHub account.
+  requires connecting your GitHub account. Optional extras in Project →
+  Settings → Environment Variables: `ANTHROPIC_API_KEY` for live AI,
+  `DATABASE_URL` (a free Neon or Supabase Postgres) for a dataset that
+  persists across visits — without it the functions keep an ephemeral copy
+  that quietly re-seeds itself, which is fine for a demo link.
 - **GitHub Pages**: works but needs config changes; not worth it here.
 
 ---
@@ -172,11 +193,13 @@ Run through this the night before **and** 10 minutes before going on:
 - [ ] Open the site **without** `?demo=clean`, click the ⚙ gear →
       **Reset demo to seed**
 - [ ] Dashboard shows: **10 units · €125,000 under management · 1 violation ·
-      €171.94 total/unit/yr**
+      €249.00 total/unit/yr (trailing 12 months)**
 - [ ] Persona picker: choose **Meridian Properties SCI** (A1) as the start
 - [ ] Switch to the `?demo=clean` tab for the actual pitch
-- [ ] Optional flourish: run `npm test` in a second Terminal — 43 green
-      tests = "our statutory test packs pass"
+- [ ] Optional flourish: run `npm test` in a second Terminal — 61 green
+      tests = "our statutory test packs pass". Or open the **System** screen
+      (visible without `?demo=clean`) to show the live back-end: persisted
+      journals, versioned rulesets, reconciliation identities holding
 - [ ] Turn ON Do Not Disturb, close Slack/Mail, plug in power
 - [ ] The 3-minute script is in `README.md`; the persona extension
       (B1 roll-up → C1 partner funnel) runs from the gear panel
@@ -191,5 +214,5 @@ Run through this the night before **and** 10 minutes before going on:
 | `Port 5173 is already in use` | The demo is already running in another Terminal window — just use the browser, or press `Ctrl + C` in the old window |
 | Page is blank / weird after lots of clicking | ⚙ gear → **Reset demo to seed**. Nuclear option: browser settings → clear site data for localhost |
 | "1 violation" isn't showing | You (or a judge) already clicked the Refund button — Reset demo to seed |
-| The AI extraction says "canned" | Expected and fine — that's the offline fallback, and the demo script works identically. Live mode only activates if a `VITE_ANTHROPIC_KEY` is configured, which the pitch does not need |
+| The AI extraction says "canned" | Expected and fine — that's the offline fallback, and the demo script works identically. Live mode only activates if `ANTHROPIC_API_KEY` is set in `.env` (server-side, used by the `/api/extract` function — the key never reaches the browser), which the pitch does not need |
 | Wi-Fi dies mid-pitch | Nothing happens. The app is already loaded and everything is local. Carry on |

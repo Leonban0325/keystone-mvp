@@ -109,6 +109,26 @@ export async function extractViaApi(text: string): Promise<ExtractResult | null>
   }
 }
 
+export interface SystemInfo {
+  endpoints: string[]
+  storage: string
+  aiKeyConfigured: boolean
+  journalCounts: { persona_id: string; events: number }[]
+  rulesets: { jurisdiction: string; version: string }[]
+  recentEvents: unknown[]
+}
+
+/** §6 "open the hood": server counts, rulesets, endpoints. Null → API off. */
+export async function fetchSystem(personaId: string): Promise<SystemInfo | null> {
+  try {
+    const res = await apiFetch(`/api/system?persona=${encodeURIComponent(personaId)}`)
+    if (!res.ok) return null
+    return (await res.json()) as SystemInfo
+  } catch {
+    return null
+  }
+}
+
 export interface QueryResponse {
   rows: Record<string, unknown>[]
   summary: string

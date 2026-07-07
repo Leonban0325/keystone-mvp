@@ -16,6 +16,7 @@ export type Screen =
   | 'partner'
   | 'rollup'
   | 'lenderpack'
+  | 'system'
 
 const STORAGE_KEY = 'keystone-demo-v1'
 

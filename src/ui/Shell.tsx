@@ -15,6 +15,7 @@ import Reports from './screens/Reports'
 import OwnerRollup from './screens/OwnerRollup'
 import LenderPack from './screens/LenderPack'
 import PartnerConsole from './screens/PartnerConsole'
+import System from './screens/System'
 
 const NAV_ITEMS: Record<Screen, string> = {
   dashboard: 'Dashboard',
@@ -27,6 +28,7 @@ const NAV_ITEMS: Record<Screen, string> = {
   savings: 'Savings Engine',
   reports: 'Reports',
   partner: 'Partner Console',
+  system: 'System',
 }
 
 /** UI-only RBAC: the engine never changes — that IS the demo point. */
@@ -48,6 +50,7 @@ const SCREENS: Record<Screen, () => ReactNode> = {
   savings: () => <Savings />,
   reports: () => <Reports />,
   partner: () => <PartnerConsole />,
+  system: () => <System />,
 }
 
 /** Money screens carry the expansion watermark for preview-market personas. */
@@ -59,9 +62,13 @@ export default function Shell() {
   const [panelOpen, setPanelOpen] = useState(false)
 
   const persona = world.state.persona
-  const nav = NAV_BY_ROLE[persona.role].filter(
-    (id) => id !== 'lenderpack' || persona.lenderPack !== undefined,
-  )
+  const nav = [
+    ...NAV_BY_ROLE[persona.role].filter(
+      (id) => id !== 'lenderpack' || persona.lenderPack !== undefined,
+    ),
+    // §6 "open the hood" — for technical judges; hidden in ?demo=clean.
+    ...(!demoClean ? (['system'] as Screen[]) : []),
+  ]
   const brandName =
     persona.themeOverride && whiteLabel ? persona.themeOverride.name : 'Keystone'
 
