@@ -38,6 +38,17 @@ npm run verify-realism  # per-persona report: settlement-lag histogram, spend lu
   as the serverless back-end. Recommended posture: public link with no AI key
   (canned fallback, nothing to leak); the presentation laptop runs the live key.
 
+## The front door (Phase 12)
+
+Every fresh visit lands on the **marketing site** (`/` — Home · The Firm · Services ·
+Insight · Client Access · Contact). Enter the product via **Client Access**: six demo
+credentials are listed on the login screen (shared password `keystone`) with one-click
+"sign in as" buttons — each scopes the app to that persona's role and dataset,
+server-side included (cross-persona API reads are refused). Sign out returns to Home;
+the persisted datasets are never touched by login/logout. `?demo=clean` skips the
+landing for rapid stage switching. A strong pitch arc: open on the Home page ("this is
+Keystone"), then sign in live as each persona.
+
 ## The three-minute demo script
 
 1. **Dashboard** — "Ten units, three countries, €125k under management — one violation." *(10s)*

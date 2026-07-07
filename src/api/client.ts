@@ -24,9 +24,41 @@ async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
   try {
-    return await fetch(path, { ...init, signal: controller.signal })
+    // F §3: every request carries the demo session token; the server refuses
+    // cross-persona reads — RBAC enforced in data, not just navigation.
+    const headers = new Headers(init?.headers)
+    const token = sessionToken()
+    if (token && !headers.has('authorization')) headers.set('authorization', `Bearer ${token}`)
+    return await fetch(path, { ...init, headers, signal: controller.signal })
   } finally {
     clearTimeout(timer)
+  }
+}
+
+function sessionToken(): string | null {
+  try {
+    const raw = sessionStorage.getItem('keystone-session-v1')
+    return raw ? ((JSON.parse(raw) as { token?: string }).token ?? null) : null
+  } catch {
+    return null
+  }
+}
+
+/** Demo sign-in against the back-end (F §2). Null → caller validates locally. */
+export async function loginViaApi(
+  email: string,
+  password: string,
+): Promise<{ personaId: string; role: import('../engine/seed/types').Role; token: string } | null> {
+  try {
+    const res = await apiFetch('/api/session', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+    if (!res.ok) return null
+    return (await res.json()) as { personaId: string; role: import('../engine/seed/types').Role; token: string }
+  } catch {
+    return null
   }
 }
 
