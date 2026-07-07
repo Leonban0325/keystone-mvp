@@ -52,3 +52,18 @@ export function monthlyYieldCents(balanceCents: number, annualRate: number): num
 
 /** Interchange rate on card spend. */
 export const INTERCHANGE_RATE = 0.003
+
+/**
+ * Historical DFR path for the curated 12-month dataset (Addendum D §2.1):
+ * the ECB easing cycle from mid-2025 into 2026, ending at the 2.25% base.
+ * Keys are months; the demo clock applies each step on its month start.
+ */
+export const DFR_PATH: Record<string, number> = {
+  '2025-07': 0.0375,
+  '2025-09': 0.035,
+  '2025-10': 0.0325,
+  '2025-12': 0.03,
+  '2026-02': 0.0275,
+  '2026-04': 0.025,
+  '2026-06': BASE_DFR,
+}

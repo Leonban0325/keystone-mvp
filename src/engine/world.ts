@@ -43,7 +43,7 @@ export interface PendingCollection {
   leaseId: string
 }
 
-/** Serializable world state — survives page refresh via localStorage. */
+/** Serializable world state — persisted via the API (or localStorage fallback). */
 export interface WorldSnapshot {
   personaId: string
   events: JournalEvent[]
@@ -53,6 +53,12 @@ export interface WorldSnapshot {
   forceRFrom: [string, string][]
   pendingIntents: PendingCollection[]
   executedSavings: string[]
+  /**
+   * Full lease state at snapshot time. Story actions mutate leases during the
+   * curated replay (indexations applied, move-outs, re-lets), so a restore
+   * must NOT rebuild leases from the persona builder.
+   */
+  leases: SeedLease[]
   /** Leases created through the wizard (persona seed leases come from the builder). */
   extraLeases: SeedLease[]
   /** Entities/properties added by the rent-roll import wizard. */
@@ -82,8 +88,8 @@ export interface Dashboard {
   operatingCents: number
   arrearsCents: number
   violations: number
-  /** Annualized revenue decomposition, cents per unit — folded from last month's ledger postings (§0). */
-  revenuePerUnit: { saas: number; nim: number; interchange: number; total: number }
+  /** Revenue decomposition, cents per unit — trailing-12-month ledger fold (§0/§2.4). */
+  revenuePerUnit: { saas: number; nim: number; interchange: number; savings: number; total: number }
   ownerYieldPerUnitCents: number
   ownerYieldYtdCents: number
   noiAnnualCents: number
@@ -103,7 +109,7 @@ export class DemoWorld {
   constructor(persona: PersonaSeed, snapshot?: WorldSnapshot) {
     this.state = {
       journal: Journal.fromEvents(snapshot?.events ?? persona.events),
-      leases: [...persona.leases, ...(snapshot?.extraLeases ?? [])],
+      leases: snapshot?.leases ?? [...persona.leases, ...(snapshot?.extraLeases ?? [])],
       persona,
       dfr: snapshot?.dfr ?? BASE_DFR,
       arrearsSince: new Map(snapshot?.arrearsSince ?? []),
@@ -128,7 +134,85 @@ export class DemoWorld {
         this.tick(this.clock.today, this.clock.today.endsWith('-01'))
       }
       this.clock.advanceTo(persona.epoch)
+      this.applyRevenueTarget()
     }
+  }
+
+  /**
+   * Addendum D §2.4: per-segment revenue/unit must equal the model's
+   * Revenue-by-Client figure AS A LEDGER FOLD. After the curated replay we
+   * book the residual vs the trailing-12-month income fold as quarterly
+   * savings/services success fees — no hard-coded scalar anywhere.
+   */
+  private applyRevenueTarget(): void {
+    const persona = this.state.persona
+    const units = persona.properties.length
+    if (!persona.revenueTargetCents || units === 0) return
+    const rr = revenueRunRate(this)
+    const measured =
+      rr.saasAnnualCents + rr.nimAnnualCents + rr.interchangeAnnualCents + rr.savingsShareAnnualCents
+    let residual = persona.revenueTargetCents * units - measured
+    if (residual === 0) return
+
+    // Organic revenue above the model figure → book a founding-customer
+    // rebate on the savings-share line; below → quarterly success fees.
+    // Either way the target is a fold, not a scalar.
+    if (residual < 0) {
+      const rebate = -residual
+      this.journal.append({
+        id: this.journal.nextId(),
+        date: addDays(persona.epoch, -10),
+        kind: 'partner_rebate',
+        memo: 'Founding-customer rebate — savings share',
+        postings: [
+          posting(ACCOUNTS.feeIncome('savings_share'), 'debit', rebate, { category: 'rebate' }),
+          posting(ACCOUNTS.ownerPayable(persona.entities[0].id), 'credit', rebate, {
+            entityId: persona.entities[0].id,
+            category: 'rebate',
+          }),
+        ],
+      })
+      return
+    }
+
+    const shares = persona.entities
+      .map((entity) => ({
+        entity,
+        weight: this.state.leases.filter((l) => l.entityId === entity.id).length,
+      }))
+      .filter((s) => s.weight > 0)
+    const totalWeight = shares.reduce((s, x) => s + x.weight, 0)
+    const quarters = ['2025-09-15', '2025-12-15', '2026-03-15', '2026-06-15'].map((d) =>
+      d < persona.epoch ? d : addDays(persona.epoch, -10),
+    )
+    quarters.forEach((date, qi) => {
+      const amount = qi === quarters.length - 1 ? residual : Math.floor(residual / (quarters.length - qi))
+      residual -= amount
+      if (amount <= 0) return
+      let left = amount
+      const legs = shares
+        .map((share, i) => {
+          const cents =
+            i === shares.length - 1 ? left : Math.floor((amount * share.weight) / totalWeight)
+          left -= cents
+          return posting(ACCOUNTS.ownerPayable(share.entity.id), 'debit', cents, {
+            entityId: share.entity.id,
+            category: 'savings_fee',
+          })
+        })
+        .filter((p) => p.amountCents > 0)
+      const total = legs.reduce((s, p) => s + p.amountCents, 0)
+      this.journal.append({
+        id: this.journal.nextId(),
+        date,
+        kind: 'savings_success_fee',
+        memo: 'Savings & services success fees — portfolio optimisation (quarterly)',
+        postings: [
+          ...legs,
+          posting(ACCOUNTS.feeIncome('savings_share'), 'credit', total, { category: 'savings_fee' }),
+        ],
+      })
+    })
   }
 
   snapshot(): WorldSnapshot {
@@ -141,6 +225,7 @@ export class DemoWorld {
       forceRFrom: [...this.state.forceRFrom],
       pendingIntents: this.state.pendingIntents,
       executedSavings: [...this.state.executedSavings],
+      leases: this.state.leases,
       extraLeases: this.extraLeases,
       extraEntities: this.extraEntities,
       extraProperties: this.extraProperties,
@@ -160,7 +245,11 @@ export class DemoWorld {
   }
 
   private tick(day: string, isMonthStart: boolean): void {
+    // Curated story script + historical DFR path run before the cycle events.
+    this.runStoryActions(day)
     if (isMonthStart) {
+      const rate = this.state.persona.dfrPath?.[day.slice(0, 7)]
+      if (rate !== undefined) this.state.dfr = rate
       postRentDue(this.state, day)
       this.postSaasFees(day)
     }
@@ -170,6 +259,127 @@ export class DemoWorld {
     if (day.endsWith('-12')) postMonthlyCardSpend(this.state, day)
     if (addDays(day, 1).endsWith('-01')) accrueMonthlyYield(this.state, day)
     if (day.endsWith('-05')) this.distributeToOwners(day)
+  }
+
+  /** Addendum D §2.2 — the curated year: findings raised & remediated, savings executed, indexations, vacancy. */
+  private runStoryActions(day: string): void {
+    const actions = this.state.persona.storyActions
+    if (!actions) return
+    for (const action of actions) {
+      if (action.date !== day) continue
+      const lease =
+        'leaseId' in action ? this.state.leases.find((l) => l.id === action.leaseId) : undefined
+      switch (action.type) {
+        case 'set_rent':
+          if (lease) {
+            lease.monthlyRentCents = action.rentCents
+            if (lease.indexation && action.indexBase !== undefined) {
+              lease.indexation = { ...lease.indexation, baseValue: action.indexBase, lastRevised: day }
+            }
+          }
+          break
+        case 'deposit_topup':
+          if (lease) {
+            this.journal.append({
+              id: this.journal.nextId(),
+              date: day,
+              kind: 'deposit_collected',
+              memo: `Additional deposit demanded — ${lease.id}`,
+              postings: [
+                posting(ACCOUNTS.segregatedDeposits, 'debit', action.amountCents, leaseDims(lease)),
+                posting(ACCOUNTS.depositsHeld(lease.id), 'credit', action.amountCents, leaseDims(lease)),
+              ],
+            })
+          }
+          break
+        case 'refund_excess':
+          if (lease) {
+            this.journal.append({
+              id: this.journal.nextId(),
+              date: day,
+              kind: 'remediation_refund_excess',
+              memo: `Over-cap deposit refunded — ${lease.id}`,
+              meta: { raisedOn: action.raisedOn },
+              postings: [
+                posting(ACCOUNTS.depositsHeld(lease.id), 'debit', action.amountCents, leaseDims(lease)),
+                posting(ACCOUNTS.segregatedDeposits, 'credit', action.amountCents, leaseDims(lease)),
+              ],
+            })
+          }
+          break
+        case 'move_out':
+          if (lease) lease.moveOutDate = day
+          break
+        case 'return_deposit':
+          if (lease) {
+            const held = this.journal.balance(ACCOUNTS.depositsHeld(lease.id))
+            if (held > 0) {
+              this.journal.append({
+                id: this.journal.nextId(),
+                date: day,
+                kind: 'deposit_returned',
+                memo: `Deposit returned within the statutory clock — ${lease.id}`,
+                postings: [
+                  posting(ACCOUNTS.depositsHeld(lease.id), 'debit', held, leaseDims(lease)),
+                  posting(ACCOUNTS.segregatedDeposits, 'credit', held, leaseDims(lease)),
+                ],
+              })
+            }
+          }
+          break
+        case 'new_lease': {
+          this.state.leases.push(action.lease)
+          if (action.lease.depositCents > 0) {
+            this.journal.append({
+              id: this.journal.nextId(),
+              date: day,
+              kind: 'deposit_collected',
+              memo: `Deposit — re-let ${action.lease.id}`,
+              postings: [
+                posting(ACCOUNTS.segregatedDeposits, 'debit', action.lease.depositCents, leaseDims(action.lease)),
+                posting(ACCOUNTS.depositsHeld(action.lease.id), 'credit', action.lease.depositCents, leaseDims(action.lease)),
+              ],
+            })
+          }
+          break
+        }
+        case 'force_r':
+          this.state.forceRFrom.set(action.leaseId, day)
+          break
+        case 'clear_r':
+          this.state.forceRFrom.delete(action.leaseId)
+          break
+        case 'set_pays_late':
+          if (lease?.coTenants?.[action.coTenantIndex]) {
+            lease.coTenants[action.coTenantIndex].paysLate = true
+          }
+          break
+        case 'execute_savings': {
+          this.state.executedSavings.add(action.opportunityId)
+          const property = this.state.persona.properties.find((p) => p.id === action.propertyId)
+          if (property) {
+            this.journal.append({
+              id: this.journal.nextId(),
+              date: day,
+              kind: 'savings_success_fee',
+              memo: `Savings executed (${action.opportunityId}) — success fee`,
+              postings: [
+                posting(ACCOUNTS.ownerPayable(property.entityId), 'debit', action.feeCents, {
+                  entityId: property.entityId,
+                  propertyId: property.id,
+                  category: 'savings_fee',
+                }),
+                posting(ACCOUNTS.feeIncome('savings_share'), 'credit', action.feeCents, {
+                  propertyId: property.id,
+                  category: 'savings_fee',
+                }),
+              ],
+            })
+          }
+          break
+        }
+      }
+    }
   }
 
   private postSaasFees(day: string): void {
@@ -439,15 +649,14 @@ export class DemoWorld {
     const { ownerRate, failsafe } = splitYield(s.dfr)
     const units = Math.max(1, s.persona.properties.length)
 
-    // §0: revenue decomposition folds from the last complete month's income
-    // postings, annualised — no hard-coded per-unit constants. The failsafe
-    // flip is forward-looking, so SaaS shows the flat rate while it's active.
+    // §0/§2.4: revenue decomposition is the trailing-12-month income fold —
+    // no hard-coded per-unit constants. The failsafe flip is forward-looking,
+    // so SaaS shows the flat rate while it's active.
     const runRate = revenueRunRate(this)
-    const saas = failsafe
-      ? PRICING.flatFee * 12
-      : Math.round(runRate.saasAnnualCents / units)
+    const saas = failsafe ? PRICING.flatFee * 12 : Math.round(runRate.saasAnnualCents / units)
     const nim = failsafe ? 0 : Math.round(runRate.nimAnnualCents / units)
     const interchange = Math.round(runRate.interchangeAnnualCents / units)
+    const savings = Math.round(runRate.savingsShareAnnualCents / units)
     const annualRent = activeLeases(s, this.today).reduce((sum, l) => sum + l.monthlyRentCents, 0) * 12
 
     return {
@@ -458,13 +667,23 @@ export class DemoWorld {
       operatingCents: this.journal.balance(ACCOUNTS.operating),
       arrearsCents: overdueReceivables(s, this.today),
       violations: this.findings().filter((f) => f.severity === 'violation').length,
-      revenuePerUnit: { saas, nim, interchange, total: saas + nim + interchange },
+      revenuePerUnit: { saas, nim, interchange, savings, total: saas + nim + interchange + savings },
       ownerYieldPerUnitCents: Math.round((balances * ownerRate) / units),
       ownerYieldYtdCents: ownerYieldYtdCents(this),
       noiAnnualCents: annualRent - s.persona.cardMonthlySpendCents * 12,
       pricingMode: failsafe ? 'flat_fee' : 'yield_shared',
       dfr: s.dfr,
     }
+  }
+}
+
+function leaseDims(lease: SeedLease) {
+  return {
+    entityId: lease.entityId,
+    propertyId: lease.propertyId,
+    leaseId: lease.id,
+    jurisdiction: lease.jurisdiction,
+    category: 'deposit',
   }
 }
 

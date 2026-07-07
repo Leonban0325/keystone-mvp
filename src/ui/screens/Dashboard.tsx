@@ -164,12 +164,13 @@ function CashFlowWidget(props: { world: DemoWorld; months: number; span?: number
 function RevenueDecompositionWidget({ world, span: s }: { world: DemoWorld; span?: number }) {
   const d = world.dashboard()
   return (
-    <Card title={`Revenue / unit — annualised @ DFR ${pct(d.dfr)}`} className={span(s ?? 2)}>
+    <Card title="Revenue / unit — trailing 12 months" className={span(s ?? 2)}>
       <table className="w-full text-sm">
         <tbody>
           <Row label="SaaS fee" value={eur(d.revenuePerUnit.saas)} />
           <Row label="NIM share" value={eur(d.revenuePerUnit.nim)} />
           <Row label="Interchange" value={eur(d.revenuePerUnit.interchange)} />
+          <Row label="Savings & services" value={eur(d.revenuePerUnit.savings)} />
           <tr className="border-t rule font-semibold">
             <td className="py-1.5">Total / unit / yr</td>
             <td className="py-1.5 text-right">{eur(d.revenuePerUnit.total)}</td>
@@ -181,7 +182,9 @@ function RevenueDecompositionWidget({ world, span: s }: { world: DemoWorld; span
           Yield failsafe active — flat-fee mode; the floor holds.
         </div>
       )}
-      <div className="mt-2 text-[11px] text-greyx">folded from last month's income postings ×12</div>
+      <div className="mt-2 text-[11px] text-greyx">
+        folded from the year's income postings · DFR today {pct(d.dfr)}
+      </div>
     </Card>
   )
 }

@@ -22,33 +22,61 @@ export function lastFullMonths(today: string, n: number): string[] {
   return keys
 }
 
-// ── §0 run-rate revenue: folds from last complete month's postings ──────────
+// ── §0/§2.4 revenue: trailing-12-month income postings, an actual fold ───────
 
 export interface RevenueRunRate {
   saasAnnualCents: number
   nimAnnualCents: number
   interchangeAnnualCents: number
+  savingsShareAnnualCents: number
 }
 
+/**
+ * Trailing 12 complete months of income postings. With the curated 12-month
+ * dataset this IS the annual actual — the number the per-segment
+ * Revenue-by-Client targets are asserted against.
+ */
 export function revenueRunRate(world: DemoWorld): RevenueRunRate {
-  const lastMonth = monthKey(addMonths(world.today.slice(0, 8) + '01', -1))
+  const windowEnd = world.today.slice(0, 8) + '01' // exclusive: current month
+  const windowStart = addMonths(windowEnd, -12)
   let saas = 0
   let nim = 0
   let interchange = 0
+  let savings = 0
   for (const event of world.journal.all) {
-    if (monthKey(event.date) !== lastMonth) continue
+    if (event.date < windowStart || event.date >= windowEnd) continue
     for (const p of event.postings) {
-      if (p.direction !== 'credit') continue
-      if (p.account === ACCOUNTS.feeIncome('saas')) saas += p.amountCents
-      else if (p.account === ACCOUNTS.nimShare) nim += p.amountCents
-      else if (p.account === ACCOUNTS.feeIncome('interchange')) interchange += p.amountCents
+      // Income is credit-normal: fold signed so rebates/contras net off.
+      const signed = p.direction === 'credit' ? p.amountCents : -p.amountCents
+      if (p.account === ACCOUNTS.feeIncome('saas')) saas += signed
+      else if (p.account === ACCOUNTS.nimShare) nim += signed
+      else if (p.account === ACCOUNTS.feeIncome('interchange')) interchange += signed
+      else if (p.account === ACCOUNTS.feeIncome('savings_share')) savings += signed
     }
   }
   return {
-    saasAnnualCents: saas * 12,
-    nimAnnualCents: nim * 12,
-    interchangeAnnualCents: interchange * 12,
+    saasAnnualCents: saas,
+    nimAnnualCents: nim,
+    interchangeAnnualCents: interchange,
+    savingsShareAnnualCents: savings,
   }
+}
+
+/** §2.2 compliance track record: findings resolved over the year, from remediation events. */
+export function complianceTrackRecord(world: DemoWorld): { resolved: number; avgDays: number } {
+  let resolved = 0
+  let daysTotal = 0
+  let dated = 0
+  for (const event of world.journal.all) {
+    if (!event.kind.startsWith('remediation_')) continue
+    resolved += 1
+    const raisedOn = event.meta?.raisedOn
+    if (raisedOn) {
+      daysTotal += daysBetween(raisedOn, event.date)
+      dated += 1
+    }
+  }
+  return { resolved, avgDays: dated ? daysTotal / dated : 0 }
 }
 
 /** Owner yield credited since Jan 1 of the demo year — a fold, not a guess. */

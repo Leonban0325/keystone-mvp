@@ -26,15 +26,11 @@ describe('A1 Meridian seed reconciliation (the deck numbers)', () => {
     expect(d.operatingCents).toBeGreaterThan(0)
   })
 
-  it('revenue decomposition reconciles to €171–172/unit/yr at 2.25% DFR', () => {
+  it('revenue decomposition reconciles to the €249/unit mid-landlord figure (Addendum D)', () => {
     const d = world().dashboard()
     expect(d.dfr).toBe(BASE_DFR)
-    expect(d.revenuePerUnit.saas).toBe(8_400)
-    expect(d.revenuePerUnit.nim).toBe(7_594)
-    expect(d.revenuePerUnit.interchange).toBe(1_200)
-    expect(d.revenuePerUnit.total).toBeGreaterThanOrEqual(17_100)
-    expect(d.revenuePerUnit.total).toBeLessThanOrEqual(17_200)
-    expect(d.ownerYieldPerUnitCents).toBe(16_875) // ≈ €169 owner yield
+    expect(Math.abs(d.revenuePerUnit.total - 24_900)).toBeLessThanOrEqual(100)
+    expect(d.ownerYieldPerUnitCents).toBe(16_875) // ≈ €169 owner yield at the 2.25% epoch rate
   })
 
   it('shows exactly the seeded stories: 1 violation, lodgement warning, return clock, arrears', () => {

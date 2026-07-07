@@ -3,6 +3,7 @@ import { eur, formatDate } from '../format'
 import { Badge, Button, Card, SeverityDot } from '../components'
 import { Finding } from '../../engine/compliance/types'
 import { RULESETS } from '../../engine/compliance/rulesets'
+import { complianceTrackRecord } from '../../engine/analytics'
 
 const REGIMES: { code: string; note: string }[] = [
   { code: 'FR', note: 'cap 1–2 mo · 10%/mo late penalty' },
@@ -19,10 +20,19 @@ export default function Compliance() {
   const findings = world.findings()
   const queue = findings.filter((f) => f.severity !== 'info')
   const clocks = findings.filter((f) => f.ruleId.endsWith('-RETURN'))
+  const record = complianceTrackRecord(world)
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-semibold tracking-tight">Deposits & Compliance</h1>
+      <div className="flex items-baseline justify-between">
+        <h1 className="text-xl font-semibold tracking-tight">Deposits & Compliance</h1>
+        {record.resolved > 0 && (
+          <div className="text-sm text-greyx">
+            track record: <span className="font-medium text-ink">{record.resolved} resolved</span>{' '}
+            this year · avg {record.avgDays.toFixed(1)} days to remediation
+          </div>
+        )}
+      </div>
 
       <Card title="Six-regime coverage">
         <div className="grid grid-cols-6 gap-3">
