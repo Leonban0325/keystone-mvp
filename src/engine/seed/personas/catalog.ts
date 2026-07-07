@@ -20,8 +20,10 @@ export function buildA2Sofia(): PersonaSeed {
     pid: string,
     label: string,
     rentCents: number,
+    chargesCents: number,
     depositCents: number,
     tenants: string[],
+    paymentDay: number,
     coTenantSplit?: boolean,
   ): { property: Property; lease: SeedLease } => ({
     property: { id: pid, entityId: entity.id, label, city: 'Rotterdam', jurisdiction: 'NL' },
@@ -32,20 +34,22 @@ export function buildA2Sofia(): PersonaSeed {
       jurisdiction: 'NL',
       furnished: false,
       monthlyRentCents: rentCents,
-      chargesCents: rentCents / 10,
+      chargesCents,
       depositCents,
       startDate: '2025-03-01',
       tenantNames: tenants,
+      paymentDay,
       coTenants: coTenantSplit
         ? tenants.map((name) => ({ name, shareCents: rentCents / tenants.length }))
         : undefined,
     },
   })
 
+  // D2 §2.1: non-round rents, separate charges lines, varied payment days.
   const units = [
-    mk('sj-p1', 'Witte de Withstraat 71b', 115_000, 230_000, ['Timo Smit']),
-    mk('sj-p2', 'Nieuwe Binnenweg 154a', 105_000, 210_000, ['Yara Kuipers']),
-    mk('sj-p3', 'Bergweg 23', 165_000, 210_000, ['Daan Visser', 'Femke Bakker', 'Ruben Mol'], true),
+    mk('sj-p1', 'Witte de Withstraat 71b', 114_300, 10_450, 228_600, ['Timo Smit'], 1),
+    mk('sj-p2', 'Nieuwe Binnenweg 154a', 104_650, 9_800, 209_300, ['Yara Kuipers'], 5),
+    mk('sj-p3', 'Bergweg 23', 163_500, 15_600, 218_000, ['Daan Visser', 'Femke Bakker', 'Ruben Mol'], 3, true),
   ]
 
   return {
@@ -207,6 +211,13 @@ export function buildB1Haussmann(): PersonaSeed {
       { date: resolved, type: 'refund_excess', leaseId: leases[index].id, amountCents: amount, raisedOn: raised },
     )
   })
+  // Arrears ARC (D2 §4): a slide — paid fine, missed January, one partial
+  // payment in March, still failing at the epoch → escalated in the aging.
+  storyActions.push(
+    { date: '2026-01-01', type: 'force_r', leaseId: leases[500].id },
+    { date: '2026-03-15', type: 'catch_up', leaseId: leases[500].id, amountCents: 60_000 },
+  )
+
   // Vacancy: unit vacated Dec 31, deposit back Jan 8 (inside the clock), re-let in March.
   const vacated = leases[70]
   storyActions.push(
@@ -284,9 +295,17 @@ export function buildB2Rijnland(): PersonaSeed {
   })
   // Social housing: one month deposit, not two.
   for (const lease of leases) lease.depositCents = lease.monthlyRentCents
+  // Benefit flows dominant (D2 §4/§7): huurtoeslag pays ~40% of rent for
+  // 60% of tenancies — the state portion always settles on time, the tenant
+  // portion carries its own timing personality.
+  leases.forEach((lease, i) => {
+    if (i % 5 < 3) {
+      lease.benefitCents = Math.round((lease.monthlyRentCents * 0.4) / 100) * 100 + 37
+    }
+  })
 
   // Turnover over the year: move-outs with deposits returned inside the clock,
-  // plus one social-mode arrears case near the epoch.
+  // plus social-mode arrears arcs — longer, with a payment plan (D2 §4).
   const storyActions: StoryAction[] = [
     { date: '2025-10-31', type: 'move_out', leaseId: leases[10].id },
     { date: '2025-11-08', type: 'return_deposit', leaseId: leases[10].id },
@@ -295,6 +314,13 @@ export function buildB2Rijnland(): PersonaSeed {
     { date: '2026-04-30', type: 'move_out', leaseId: leases[90].id },
     { date: '2026-05-09', type: 'return_deposit', leaseId: leases[90].id },
     { date: '2026-06-01', type: 'force_r', leaseId: leases[130].id },
+    // Payment plan: fell behind in February, pays €280/month back from March,
+    // still in arrears at the epoch — the long social arc, not a write-off.
+    { date: '2026-02-01', type: 'force_r', leaseId: leases[200].id },
+    { date: '2026-03-20', type: 'catch_up', leaseId: leases[200].id, amountCents: 28_000 },
+    { date: '2026-04-20', type: 'catch_up', leaseId: leases[200].id, amountCents: 28_000 },
+    { date: '2026-05-20', type: 'catch_up', leaseId: leases[200].id, amountCents: 28_000 },
+    { date: '2026-06-20', type: 'catch_up', leaseId: leases[200].id, amountCents: 28_000 },
   ]
 
   return {
@@ -308,6 +334,7 @@ export function buildB2Rijnland(): PersonaSeed {
     historyFrom: YEAR_BACK,
     dfrPath: DFR_PATH,
     revenueTargetCents: 12_400,
+    timingProfile: 'social',
     storyActions,
     entities: [entity],
     properties,
@@ -363,6 +390,8 @@ export function buildB3Ibervia(): PersonaSeed {
     historyFrom: YEAR_BACK,
     dfrPath: DFR_PATH,
     revenueTargetCents: 26_400,
+    // Professionally managed BTR: tighter payment timing (D2 §7).
+    timingProfile: 'tight',
     storyActions: [
       { date: '2026-02-20', type: 'execute_savings', opportunityId: 'insurance-b3-ibervia', propertyId: 'ib-p1', feeCents: 40_000 },
     ],

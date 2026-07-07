@@ -20,8 +20,9 @@ describe('A1 Meridian seed reconciliation (the deck numbers)', () => {
     expect(w.today).toBe('2026-07-01')
     const d = w.dashboard()
     expect(d.balancesCents).toBe(12_500_000)
-    expect(d.depositsCashCents).toBe(2_320_000)
-    expect(d.reservesCashCents).toBe(10_180_000)
+    // Deposits are statutory over the NON-round rents (D2 §2.1) + the €200 over-cap story.
+    expect(d.depositsCashCents).toBe(2_220_200)
+    expect(d.reservesCashCents).toBe(10_279_800)
     expect(d.unitCount).toBe(10)
     expect(d.operatingCents).toBeGreaterThan(0)
   })
@@ -59,7 +60,8 @@ describe('A1 Meridian seed reconciliation (the deck numbers)', () => {
     const finding = w.findings().find((f) => f.ruleId === 'FR-DEP-CAP')!
     w.applyRemediation(finding)
     expect(w.findings().filter((f) => f.severity === 'violation')).toHaveLength(0)
-    expect(w.dashboard().depositsCashCents).toBe(2_300_000)
+    expect(w.dashboard().depositsCashCents).toBe(2_200_200) // €200 refunded
+
   })
 })
 
@@ -119,7 +121,7 @@ describe('indexation', () => {
     const revision = calculateRevision(lease)!
     expect(revision.index).toBe('IRL')
     expect(revision.currentValue).toBe(148.97)
-    expect(revision.newRentCents).toBe(Math.round((100_000 * 148.97) / 146.79))
+    expect(revision.newRentCents).toBe(Math.round((lease.monthlyRentCents * 148.97) / 146.79))
     expect(revision.increaseCents).toBeGreaterThan(0)
     expect(revision.noticeText).toContain('Révision annuelle du loyer')
   })

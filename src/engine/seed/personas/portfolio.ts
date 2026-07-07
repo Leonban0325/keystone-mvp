@@ -1,13 +1,21 @@
 import { Journal, posting } from '../../ledger/journal'
 import { ACCOUNTS, JournalEvent, Jurisdiction } from '../../ledger/types'
 import { intBetween, pick } from '../rng'
+import { chargesCents, nonRoundAmountCents } from '../../simulators/realism'
 import { Entity, Property, SeedLease } from '../types'
 
 /** Shared portfolio generator for the persona catalog. Fixed-seed RNG in, deterministic out. */
 
 export const FIRST_NAMES = ['Emma', 'Lucas', 'Chloé', 'Nathan', 'Léa', 'Jules', 'Manon', 'Louis', 'Camille', 'Hugo', 'Sanne', 'Daan', 'Fleur', 'Bram', 'Lotte', 'Sem', 'Carmen', 'Diego', 'Lucía', 'Javier', 'Marta', 'Pablo', 'Anna', 'Felix', 'Greta', 'Jonas', 'Clara', 'Maximilian']
 export const LAST_NAMES = ['Martin', 'Bernard', 'Dubois', 'Moreau', 'Laurent', 'Simon', 'Michel', 'Leroy', 'Roux', 'Fournier', 'de Jong', 'Jansen', 'Visser', 'Bakker', 'Meijer', 'García', 'Fernández', 'López', 'Sánchez', 'Romero', 'Müller', 'Schmidt', 'Weber', 'Wagner', 'Becker']
-export const STREETS = ['rue de la Paix', 'rue Voltaire', 'avenue Ledru-Rollin', 'rue de Charonne', 'boulevard Beaumarchais', 'rue Saint-Antoine', 'rue des Martyrs', 'rue Lepic', 'rue de Belleville', 'rue Ordener', 'Herengracht', 'Prinsengracht', 'Javastraat', 'Witte de Withstraat', 'Carrer de Balmes', 'Carrer de Provença', 'Calle de Fuencarral', 'Calle de Serrano', 'Leopoldstraße', 'Schellingstraße', 'Kaulbachstraße', 'Amalienstraße']
+/** Street pools per jurisdiction — a Leiden flat is not on "rue Voltaire" (D2). */
+export const STREETS_BY: Record<string, string[]> = {
+  FR: ['rue de la Paix', 'rue Voltaire', 'avenue Ledru-Rollin', 'rue de Charonne', 'boulevard Beaumarchais', 'rue Saint-Antoine', 'rue des Martyrs', 'rue Lepic', 'rue de Belleville', 'rue Ordener'],
+  NL: ['Herengracht', 'Prinsengracht', 'Javastraat', 'Witte de Withstraat', 'Breestraat', 'Haarlemmerstraat', 'Rapenburg', 'Hooigracht'],
+  ES: ['Carrer de Balmes', 'Carrer de Provença', 'Calle de Fuencarral', 'Calle de Serrano', 'Carrer de Sardenya', 'Calle de Atocha'],
+  DE: ['Leopoldstraße', 'Schellingstraße', 'Kaulbachstraße', 'Amalienstraße', 'Türkenstraße', 'Nordendstraße'],
+}
+export const STREETS = STREETS_BY.FR
 
 export function tenantName(rand: () => number): string {
   return `${pick(rand, FIRST_NAMES)} ${pick(rand, LAST_NAMES)}`
@@ -51,12 +59,14 @@ export function generateUnits(opts: GenerateOpts): { properties: Property[]; lea
   for (let i = 0; i < opts.count; i += 1) {
     const location = pick(opts.rand, opts.cities)
     const pid = `${opts.prefix}-p${i + 1}`
-    const rentCents = Math.round(intBetween(opts.rand, opts.rentRangeCents[0], opts.rentRangeCents[1]) / 500) * 500
+    // D2 §2.1: realistic, NON-round rents (€1,187 / €943.50), set at signing
+    // and held flat until indexation.
+    const rentCents = nonRoundAmountCents(opts.rand, opts.rentRangeCents[0], opts.rentRangeCents[1])
     const furnished = opts.rand() < opts.furnishedShare
     properties.push({
       id: pid,
       entityId: opts.entityId,
-      label: `${intBetween(opts.rand, 2, 120)} ${pick(opts.rand, STREETS)}`,
+      label: `${intBetween(opts.rand, 2, 120)} ${pick(opts.rand, STREETS_BY[location.jurisdiction] ?? STREETS)}`,
       city: location.city,
       jurisdiction: location.jurisdiction,
     })
@@ -67,7 +77,8 @@ export function generateUnits(opts: GenerateOpts): { properties: Property[]; lea
       jurisdiction: location.jurisdiction,
       furnished,
       monthlyRentCents: rentCents,
-      chargesCents: Math.round(rentCents / 10),
+      // Charges provision is a separate, smaller, non-round line (D2 §2.1).
+      chargesCents: chargesCents(opts.rand),
       depositCents: statutoryDepositCents(location.jurisdiction, furnished, rentCents),
       startDate: `${intBetween(opts.rand, opts.startYears[0], opts.startYears[1])}-${String(intBetween(opts.rand, 1, 12)).padStart(2, '0')}-01`,
       lodgementCertificate:

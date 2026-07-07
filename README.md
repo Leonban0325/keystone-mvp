@@ -19,7 +19,9 @@ fully offline**.
 npm install
 npm run seed       # generate + persist the curated datasets (PGlite, .data/ — idempotent)
 npm run dev        # http://localhost:5173 — UI + /api/* via Vite middleware
-npm test           # ledger invariants + statutory packs + reconciliation — part of the demo story
+npm test           # ledger invariants + statutory packs + reconciliation + realism — the demo story
+npm run verify-realism  # per-persona report: settlement-lag histogram, spend lumpiness,
+                        # arrears arcs, outlier flags, aggregate reconciliation (Addendum D2)
 ```
 
 - `?demo=clean` hides the dev badges, the demo control panel, and the System screen

@@ -6,13 +6,13 @@ import { DemoClock } from './simulators/clock'
 import { BASE_DFR, PRICING, splitYield } from './simulators/economics'
 import {
   activeLeases,
-  collectRent,
   deriveDunning,
+  payReceivable,
   postRentDue,
   resolvePendingCollections,
 } from './simulators/sddLifecycle'
 import { accrueMonthlyYield, totalBalances } from './simulators/yieldAccrual'
-import { postMonthlyCardSpend } from './simulators/cardFeed'
+import { postMonthlyInterchange, runSpendEngine } from './simulators/spendEngine'
 import { complianceView, evaluatePortfolio } from './compliance/evaluator'
 import { RULESETS } from './compliance/rulesets'
 import { Finding } from './compliance/types'
@@ -250,14 +250,20 @@ export class DemoWorld {
     if (isMonthStart) {
       const rate = this.state.persona.dfrPath?.[day.slice(0, 7)]
       if (rate !== undefined) this.state.dfr = rate
-      postRentDue(this.state, day)
       this.postSaasFees(day)
     }
+    // Rent falls due on each lease's own payment day (D2 §2.2); the SDD
+    // presentation is scheduled the same day and settles with the tenant's
+    // personality lag, so both run daily rather than on fixed calendar days.
+    postRentDue(this.state, day)
     resolvePendingCollections(this.state, day)
-    if (day.endsWith('-03')) collectRent(this.state, day)
     if (day.endsWith('-04')) this.postManagerFees(day)
-    if (day.endsWith('-12')) postMonthlyCardSpend(this.state, day)
-    if (addDays(day, 1).endsWith('-01')) accrueMonthlyYield(this.state, day)
+    // Vendor & card spend is event-driven — lumpy, seasonal (D2 §3/§5).
+    runSpendEngine(this.state, day)
+    if (addDays(day, 1).endsWith('-01')) {
+      accrueMonthlyYield(this.state, day)
+      postMonthlyInterchange(this.state, day)
+    }
     if (day.endsWith('-05')) this.distributeToOwners(day)
   }
 
@@ -353,6 +359,9 @@ export class DemoWorld {
           if (lease?.coTenants?.[action.coTenantIndex]) {
             lease.coTenants[action.coTenantIndex].paysLate = true
           }
+          break
+        case 'catch_up':
+          payReceivable(this.state, action.leaseId, day, action.amountCents)
           break
         case 'execute_savings': {
           this.state.executedSavings.add(action.opportunityId)
@@ -542,6 +551,11 @@ export class DemoWorld {
   /** Force the next SDD collections for a lease to R-fail. */
   forceRTransaction(leaseId: string): void {
     this.state.forceRFrom.set(leaseId, this.today)
+    // Collections already presented (rent due earlier this month) are still
+    // in flight — fail those too, or the demo button would wait a month.
+    for (const pending of this.state.pendingIntents) {
+      if (pending.leaseId === leaseId) pending.fail = true
+    }
   }
 
   clearForceR(leaseId: string): void {
@@ -692,6 +706,14 @@ function overdueReceivables(s: WorldState, today: string): number {
   let total = 0
   for (const [leaseId] of s.arrearsSince) {
     total += s.journal.balance(ACCOUNTS.rentReceivable(leaseId))
+    // A presentation that WILL R-fail is already out of the receivable and
+    // parked in-flight — count it, or arrears would dip for the 0–2 days
+    // between presentation and the compensating event.
+    for (const pending of s.pendingIntents) {
+      if (pending.leaseId === leaseId && pending.fail) {
+        total += pending.intent.postings[0].amountCents
+      }
+    }
   }
   void today
   return total
