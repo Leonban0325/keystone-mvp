@@ -84,6 +84,56 @@ body {
   animation: skeleton-sheen 1.4s ease-in-out infinite;
 }
 
+/* Phase 15 (Addendum I): the pitch deck — humane PropTech register.
+   Warmed palette + humanist serif, scoped to the deck only. */
+.deck {
+  --ink: #14202b;
+  --brass: #b0872f;
+  --stone: #9b8f7e;
+  --terra: #a5643e;
+  background: #f6f2e9;
+  color: #14202b;
+}
+.deck-serif {
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  letter-spacing: -0.01em;
+}
+@keyframes deck-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.deck-reveal {
+  animation: deck-rise 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+@keyframes deck-dissolve {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.deck-slide {
+  animation: deck-dissolve 0.55s ease-out both;
+}
+.deck:fullscreen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .deck-reveal,
+  .deck-slide {
+    animation: none;
+  }
+}
+
 /* G §4: printing a report outputs ONLY the report artifact — no app chrome. */
 @media print {
   body * {

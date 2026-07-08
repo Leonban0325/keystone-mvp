@@ -25,13 +25,14 @@ export type Screen =
 export { defaultScreen } from './rbac'
 
 /** Public marketing routes + the gated app (Addendum F §4). */
-export type Route = 'home' | 'firm' | 'services' | 'insight' | 'contact' | 'access' | 'app'
+export type Route = 'home' | 'firm' | 'services' | 'insight' | 'pitch' | 'contact' | 'access' | 'app'
 
 const ROUTE_PATHS: Record<Route, string> = {
   home: '/',
   firm: '/firm',
   services: '/services',
   insight: '/insight',
+  pitch: '/pitch',
   contact: '/contact',
   access: '/access',
   app: '/app',

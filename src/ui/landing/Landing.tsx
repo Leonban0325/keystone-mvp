@@ -15,6 +15,7 @@ const NAV: { route: Route; label: string }[] = [
   { route: 'firm', label: 'The Firm' },
   { route: 'services', label: 'Services' },
   { route: 'insight', label: 'Insight' },
+  { route: 'pitch', label: 'Pitch' },
   { route: 'access', label: 'Client Access' },
   { route: 'contact', label: 'Contact' },
 ]
