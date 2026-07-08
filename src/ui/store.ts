@@ -147,7 +147,12 @@ if (!bootSession && demoCleanBoot) {
 let bootRoute = routeFromPath(window.location.pathname)
 if (bootRoute === 'app' && !bootSession) bootRoute = 'access'
 if (demoCleanBoot && bootSession) bootRoute = 'app'
-window.history.replaceState(null, '', ROUTE_PATHS[bootRoute] + window.location.search)
+// Preserve the hash on boot — the deck deep-links as /pitch#N.
+window.history.replaceState(
+  null,
+  '',
+  ROUTE_PATHS[bootRoute] + window.location.search + window.location.hash,
+)
 
 applyTheme(initial.world, true)
 
