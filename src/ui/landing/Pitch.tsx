@@ -255,7 +255,7 @@ function TitleSlide() {
         <div className="mt-8 h-px w-full bg-[color:var(--stone)] opacity-40" />
         <div className="mt-5 flex items-baseline justify-between text-sm text-[color:var(--ink)]">
           <span className="tracking-wide">
-            Leon Ban · Duong Bui · Mark Gebrane · Bariah Al-besharah
+            Leon Ban · Duong Bui · Mark Gebrane · Badriah Al-Besharah
           </span>
           <span className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--stone)]">
             HEC Startup Competition · 2026
@@ -594,7 +594,7 @@ const FOUNDERS: [string, string][] = [
   ['Leon Ban', 'Product & engineering — built the compliance engine and ledger'],
   ['Duong Bui', 'Finance & treasury — the yield model and unit economics'],
   ['Mark Gebrane', 'Growth & partnerships — channels, agents, platforms'],
-  ['Bariah Al-besharah', 'Regulatory & operations — the licence ladder, KYC/AML'],
+  ['Badriah Al-Besharah', 'Regulatory & operations — the licence ladder, KYC/AML'],
 ]
 
 function TeamSlide() {

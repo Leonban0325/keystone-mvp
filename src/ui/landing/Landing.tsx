@@ -508,7 +508,7 @@ const FOUNDERS = [
   ['Leon Ban', 'Co-founder'],
   ['Duong Bui', 'Co-founder'],
   ['Mark Gebrane', 'Co-founder'],
-  ['Bariah Al-besharah', 'Co-founder'],
+  ['Badriah Al-Besharah', 'Co-founder'],
 ]
 
 function Firm() {
