@@ -117,10 +117,10 @@ export default function System() {
             <tbody>
               {[...RULESETS.entries()].map(([jurisdiction, ruleset]) => (
                 <tr key={jurisdiction} className="border-b rule">
-                  <td className="py-1.5 font-medium">{jurisdiction}</td>
-                  <td className="py-1.5 tabular-nums text-greyx">v{ruleset.version}</td>
-                  <td className="py-1.5 tabular-nums text-greyx">{ruleset.rules.length} rules</td>
-                  <td className="py-1.5 text-right text-xs text-greyx">
+                  <td className="py-2 font-medium">{jurisdiction}</td>
+                  <td className="py-2 tabular-nums text-greyx">v{ruleset.version}</td>
+                  <td className="py-2 tabular-nums text-greyx">{ruleset.rules.length} rules</td>
+                  <td className="py-2 text-right text-xs text-greyx">
                     {findings.filter((f) => f.ruleId.startsWith(jurisdiction)).length} open finding(s)
                   </td>
                 </tr>

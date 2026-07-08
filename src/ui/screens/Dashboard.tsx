@@ -1,7 +1,7 @@
 import { ReactNode } from 'react'
 import { useApp } from '../store'
 import { eur, eurCompact, formatDate, pct } from '../format'
-import { Badge, Card, CountUp, Stat, StatusRing } from '../components'
+import { Badge, Card, CountUp, Stat, StatusRing, TrustMark } from '../components'
 import { actionQueue } from '../notifications'
 import { PARTNER_BANK } from '../../config'
 import { CashFlowChart, NoiBridgeChart, TrendLine, CHART_COLORS } from '../charts'
@@ -35,7 +35,7 @@ export default function Dashboard() {
   const widgets = widgetsFor(world)
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex items-baseline justify-between">
         <h1 className="text-xl font-semibold tracking-tight">Portfolio</h1>
         <div className="text-sm text-greyx">
@@ -47,7 +47,7 @@ export default function Dashboard() {
       <ActionQueue />
 
       {/* Shared top row — §3 count-up on the hero figures. */}
-      <div className="grid grid-cols-4 gap-5">
+      <div className="grid grid-cols-4 gap-4">
         <Card>
           <Stat
             label="NOI (annualised)"
@@ -60,14 +60,16 @@ export default function Dashboard() {
             label="Balances"
             value={<CountUp value={d.balancesCents} format={eurCompact} />}
             sub={
-              <span className="flex items-center gap-2">
-                {eurCompact(d.depositsCashCents)} deposits · {eurCompact(d.reservesCashCents)} reserves{' '}
-                <span
-                  title={`Segregated client-money accounts at ${PARTNER_BANK.name}. ${PARTNER_BANK.dgsNote}`}
-                  className="cursor-help"
-                >
-                  <Badge tone="brass">Segregated · DGS</Badge>
+              <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span>
+                  {eurCompact(d.depositsCashCents)} deposits · {eurCompact(d.reservesCashCents)}{' '}
+                  reserves
                 </span>
+                <TrustMark
+                  title={`Segregated client-money accounts at ${PARTNER_BANK.name}. ${PARTNER_BANK.dgsNote}`}
+                >
+                  Segregated · DGS-protected
+                </TrustMark>
               </span>
             }
           />
@@ -94,7 +96,7 @@ export default function Dashboard() {
       </div>
 
       {/* Role-specific widget grid */}
-      <div className="grid grid-cols-6 gap-5">{widgets}</div>
+      <div className="grid grid-cols-6 gap-4">{widgets}</div>
     </div>
   )
 }
@@ -106,8 +108,8 @@ function ActionQueue() {
   const actions = actionQueue(world)
   if (actions.length === 0) return null
   return (
-    <div className="border rule border-l-2 border-l-[#B4392E] bg-white/40 px-4 py-2.5">
-      <div className="mb-1.5 text-[10px] uppercase tracking-[0.12em] text-greyx">
+    <div className="border rule border-l-2 border-l-[#B4392E] bg-white/40 px-4 py-2">
+      <div className="mb-2 text-[10px] uppercase tracking-[0.1em] text-greyx">
         Needs attention today
       </div>
       <div className="flex flex-wrap gap-x-6 gap-y-1">
@@ -120,7 +122,7 @@ function ActionQueue() {
               setScreen(a.screen)
             }}
           >
-            <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[#B4392E] align-middle" />
+            <span className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-[#B4392E] align-middle" />
             {a.title} <span className="text-brass">→</span>
           </button>
         ))}
@@ -182,7 +184,7 @@ function ComplianceRingWidget({ world }: { world: DemoWorld }) {
   const warnings = world.findings().filter((f) => f.severity === 'warning').length
   return (
     <Card title="Compliance status" className={span(2)}>
-      <div className="flex items-center gap-5">
+      <div className="flex items-center gap-4">
         <StatusRing total={world.state.leases.length} warnings={warnings} violations={d.violations} />
         <div className="space-y-1 text-sm">
           <div>
@@ -245,8 +247,8 @@ function AccountValueWidget({ world, span: s }: { world: DemoWorld; span?: numbe
           <Row label="Savings captured" value={eur(savingsCaptured)} />
           <Row label="Fees paid YTD" value={`− ${eur(feesPaid)}`} />
           <tr className="border-t rule font-semibold">
-            <td className="py-1.5">Net value</td>
-            <td className={`py-1.5 text-right ${net >= 0 ? 'text-[#3D6B47]' : ''}`}>{eur(net)}</td>
+            <td className="py-2">Net value</td>
+            <td className={`py-2 text-right ${net >= 0 ? 'text-[#3D6B47]' : ''}`}>{eur(net)}</td>
           </tr>
         </tbody>
       </table>
@@ -346,7 +348,7 @@ function ArrearsAgingWidget({ world }: { world: DemoWorld }) {
                 opacity: bucket.amountCents > 0 ? 1 : 0.15,
               }}
             />
-            <div className="mt-1 text-[10px] uppercase tracking-[0.08em] text-greyx">{bucket.label}d</div>
+            <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-greyx">{bucket.label}d</div>
           </button>
         ))}
       </div>
@@ -490,8 +492,8 @@ function ProcurementWidget({ world }: { world: DemoWorld }) {
 function Row(props: { label: string; value: string }) {
   return (
     <tr className="border-t rule first:border-t-0">
-      <td className="py-1.5 text-greyx">{props.label}</td>
-      <td className="py-1.5 text-right">{props.value}</td>
+      <td className="py-2 text-greyx">{props.label}</td>
+      <td className="py-2 text-right">{props.value}</td>
     </tr>
   )
 }

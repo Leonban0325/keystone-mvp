@@ -56,7 +56,7 @@ export default function Reports() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold tracking-tight">Reports</h1>
         <Button tone="primary" onClick={exportFec}>
@@ -112,16 +112,16 @@ export default function Reports() {
             <table className="mt-6 w-full">
               <tbody>
                 <tr className="border-t rule">
-                  <td className="py-1.5">Loyer hors charges</td>
-                  <td className="py-1.5 text-right">{eur(lease.monthlyRentCents)}</td>
+                  <td className="py-2">Loyer hors charges</td>
+                  <td className="py-2 text-right">{eur(lease.monthlyRentCents)}</td>
                 </tr>
                 <tr className="border-t rule">
-                  <td className="py-1.5">Provisions sur charges</td>
-                  <td className="py-1.5 text-right">{eur(lease.chargesCents)}</td>
+                  <td className="py-2">Provisions sur charges</td>
+                  <td className="py-2 text-right">{eur(lease.chargesCents)}</td>
                 </tr>
                 <tr className="border-t rule font-semibold">
-                  <td className="py-1.5">Total</td>
-                  <td className="py-1.5 text-right">{eur(lease.monthlyRentCents + lease.chargesCents)}</td>
+                  <td className="py-2">Total</td>
+                  <td className="py-2 text-right">{eur(lease.monthlyRentCents + lease.chargesCents)}</td>
                 </tr>
               </tbody>
             </table>

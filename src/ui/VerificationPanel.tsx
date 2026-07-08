@@ -59,7 +59,7 @@ export default function VerificationPanel(props: {
         {record.steps.map((step) => (
           <li
             key={step.id}
-            className={`grid grid-cols-[180px_1fr] gap-3 border-l-2 py-1.5 pl-3 ${
+            className={`grid grid-cols-[180px_1fr] gap-3 border-l-2 py-2 pl-3 ${
               step.status === 'passed' ? 'border-[#3D6B47]' : 'border-hairline opacity-70'
             }`}
           >
@@ -71,9 +71,9 @@ export default function VerificationPanel(props: {
               {step.status === 'passed' ? (
                 <>
                   <span className="text-[#3D6B47]">✓ {step.at && formatDate(step.at)}</span>
-                  {step.result && <div className="mt-0.5 text-greyx">{step.result}</div>}
+                  {step.result && <div className="mt-1 text-greyx">{step.result}</div>}
                   {step.id === 'ubo' && record.ubos && (
-                    <div className="mt-1 flex flex-wrap gap-1.5">
+                    <div className="mt-1 flex flex-wrap gap-2">
                       {record.ubos.map((ubo) => (
                         <Badge key={ubo.name} tone={ubo.verified ? 'green' : 'grey'}>
                           {ubo.name} · {ubo.sharePct}%{ubo.verified ? ' ✓' : ''}

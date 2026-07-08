@@ -34,7 +34,7 @@ export default function Landing(props: { section: Route; children?: React.ReactN
               Financial infrastructure for rental real estate
             </span>
           </button>
-          <nav className="flex items-center gap-5 text-sm">
+          <nav className="flex items-center gap-4 text-sm">
             {NAV.map((item) => (
               <button
                 key={item.route}
@@ -43,7 +43,7 @@ export default function Landing(props: { section: Route; children?: React.ReactN
                   props.section === item.route
                     ? 'border-b-2 border-brass font-medium text-ink'
                     : 'text-greyx hover:text-ink'
-                } ${item.route === 'access' ? 'border border-ink px-3 py-1 !text-ink hover:bg-ink hover:!text-paper' : 'pb-0.5'}`}
+                } ${item.route === 'access' ? 'border border-ink px-3 py-1 !text-ink hover:bg-ink hover:!text-paper' : 'pb-1'}`}
               >
                 {item.label}
               </button>
@@ -57,7 +57,7 @@ export default function Landing(props: { section: Route; children?: React.ReactN
       </main>
 
       <footer className="border-t rule">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5 text-[11px] text-greyx">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4 text-[11px] text-greyx">
           <span>© 2026 Keystone Financial Technologies · Paris — Amsterdam</span>
           <button
             className="underline-offset-2 hover:text-ink hover:underline"
@@ -118,7 +118,7 @@ function Home() {
           <h1 className="text-4xl font-semibold leading-tight tracking-tight">
             The financial operating system for European rental real estate.
           </h1>
-          <p className="mt-5 max-w-2xl text-lg text-greyx">
+          <p className="mt-4 max-w-2xl text-lg text-greyx">
             Rent rails, statutory deposit custody, treasury yield and compliance — six regimes,
             one account, every euro on a double-entry ledger.
           </p>
@@ -143,7 +143,7 @@ function Home() {
         ].map(([value, label]) => (
           <div key={label} className="px-4 py-6">
             <div className="text-sm font-semibold">{value}</div>
-            <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-greyx">{label}</div>
+            <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-greyx">{label}</div>
           </div>
         ))}
       </section>
@@ -156,7 +156,7 @@ function Home() {
           ['One operating system', 'Collections, custody, spend, bookkeeping and reporting on a single dimensioned ledger — auditable to the cent.'],
         ].map(([title, line]) => (
           <div key={title}>
-            <h3 className="text-sm font-semibold uppercase tracking-[0.12em]">{title}</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.14em]">{title}</h3>
             <p className="mt-2 text-sm leading-relaxed text-greyx">{line}</p>
           </div>
         ))}
@@ -165,7 +165,7 @@ function Home() {
       {/* How it works — the money-rails concept. */}
       <section className="py-14">
         <h2 className="text-[11px] uppercase tracking-[0.18em] text-greyx">How it works</h2>
-        <div className="mt-5 grid grid-cols-4 gap-0 text-sm">
+        <div className="mt-4 grid grid-cols-4 gap-0 text-sm">
           {[
             ['Tenant', 'pays by SEPA direct debit to a per-lease virtual IBAN'],
             ['Escrow layer', 'an EMI/escrow-as-a-service provider moves the money'],
@@ -173,9 +173,9 @@ function Home() {
             ['Keystone', 'orchestrates every step — and never holds the money'],
           ].map(([title, line], i) => (
             <div key={title} className="flex items-stretch">
-              {i > 0 && <div className="flex w-6 items-center justify-center text-greyx">▶</div>}
+              {i > 0 && <div className="flex w-6 items-center justify-center text-greyx">→</div>}
               <div className={`flex-1 border p-4 ${i === 3 ? 'border-dashed rule' : 'rule bg-white/40'}`}>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.12em]">{title}</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.14em]">{title}</div>
                 <div className="mt-1 text-xs leading-relaxed text-greyx">{line}</div>
               </div>
             </div>
@@ -232,7 +232,7 @@ function Firm() {
         {FOUNDERS.map(([name, role]) => (
           <div key={name} className="border rule bg-white/40 p-4">
             <div className="text-sm font-semibold">{name}</div>
-            <div className="mt-0.5 text-xs text-greyx">{role}</div>
+            <div className="mt-1 text-xs text-greyx">{role}</div>
           </div>
         ))}
       </div>
@@ -268,7 +268,7 @@ function Services() {
         {SERVICE_GROUPS.map(([group, lines]) => (
           <div key={group} className="border-t rule pt-4">
             <h3 className="text-sm font-semibold">{group}</h3>
-            <ul className="mt-2 space-y-1.5 text-sm leading-relaxed text-greyx">
+            <ul className="mt-2 space-y-2 text-sm leading-relaxed text-greyx">
               {lines.map((line) => (
                 <li key={line}>· {line}</li>
               ))}
@@ -276,7 +276,7 @@ function Services() {
           </div>
         ))}
       </div>
-      <div className="mt-10 border rule bg-white/40 p-5 text-sm text-greyx">
+      <div className="mt-10 border rule bg-white/40 p-4 text-sm text-greyx">
         <span className="font-semibold text-ink">Who we serve.</span> Small and mid-size
         landlords on self-serve tiers · enterprise — property managers, housing associations and
         institutional BTR — under white-label and procurement-grade terms · software platforms
@@ -305,10 +305,10 @@ function Insight() {
       </p>
       <div className="mt-8 grid grid-cols-2 gap-6">
         {ARTICLES.map(([title, summary]) => (
-          <article key={title} className="border rule bg-white/40 p-5">
+          <article key={title} className="border rule bg-white/40 p-4">
             <h3 className="text-base font-semibold leading-snug">{title}</h3>
             <p className="mt-2 text-sm leading-relaxed text-greyx">{summary}</p>
-            <div className="mt-3 text-[10px] uppercase tracking-[0.14em] text-brass">
+            <div className="mt-3 text-[10px] uppercase tracking-[0.1em] text-brass">
               Full note — coming soon
             </div>
           </article>
@@ -339,16 +339,16 @@ function Contact() {
         </p>
         <div className="mt-8 space-y-3 text-sm">
           <div>
-            <div className="text-[10px] uppercase tracking-[0.14em] text-greyx">Head office</div>
-            <div className="mt-0.5">10 rue de Penthièvre, 75008 Paris</div>
+            <div className="text-[10px] uppercase tracking-[0.1em] text-greyx">Head office</div>
+            <div className="mt-1">10 rue de Penthièvre, 75008 Paris</div>
           </div>
           <div>
-            <div className="text-[10px] uppercase tracking-[0.14em] text-greyx">Enterprise</div>
-            <div className="mt-0.5">enterprise@keystone.eu</div>
+            <div className="text-[10px] uppercase tracking-[0.1em] text-greyx">Enterprise</div>
+            <div className="mt-1">enterprise@keystone.eu</div>
           </div>
           <div>
-            <div className="text-[10px] uppercase tracking-[0.14em] text-greyx">Partnerships</div>
-            <div className="mt-0.5">partners@keystone.eu</div>
+            <div className="text-[10px] uppercase tracking-[0.1em] text-greyx">Partnerships</div>
+            <div className="mt-1">partners@keystone.eu</div>
           </div>
         </div>
       </div>
@@ -368,7 +368,7 @@ function Contact() {
               ['email', 'Work email', 'email'],
             ].map(([name, label, type]) => (
               <label key={name} className="block text-sm">
-                <span className="text-[10px] uppercase tracking-[0.14em] text-greyx">{label}</span>
+                <span className="text-[10px] uppercase tracking-[0.1em] text-greyx">{label}</span>
                 <input
                   name={name}
                   type={type}
@@ -378,7 +378,7 @@ function Contact() {
               </label>
             ))}
             <label className="block text-sm">
-              <span className="text-[10px] uppercase tracking-[0.14em] text-greyx">
+              <span className="text-[10px] uppercase tracking-[0.1em] text-greyx">
                 Portfolio & what you need
               </span>
               <textarea

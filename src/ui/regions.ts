@@ -34,3 +34,17 @@ export function regionOf(city: string, jurisdiction: Jurisdiction | string): str
   }
   return COUNTRY_FALLBACK[jurisdiction] ?? jurisdiction
 }
+
+/** J §2.3: the grouping view is country → region → city. */
+const COUNTRY_NAME: Record<string, string> = {
+  FR: 'France',
+  NL: 'Netherlands',
+  ES: 'España',
+  DE: 'Deutschland',
+  AT: 'Österreich',
+  IT: 'Italia',
+}
+
+export function countryOf(jurisdiction: Jurisdiction | string): string {
+  return COUNTRY_NAME[jurisdiction] ?? jurisdiction
+}

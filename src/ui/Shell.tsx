@@ -72,10 +72,10 @@ export default function Shell() {
 
   return (
     <div className="flex min-h-screen">
-      <aside className="w-56 shrink-0 border-r rule px-5 py-6">
+      <aside className="w-56 shrink-0 border-r rule px-4 py-6">
         <div className="mb-8">
           <div className="text-lg font-semibold tracking-tight">{brandName}</div>
-          <div className="mt-0.5 text-[11px] text-greyx">{persona.name}</div>
+          <div className="mt-1 text-[11px] text-greyx">{persona.name}</div>
           {persona.themeOverride && whiteLabel && (
             <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-greyx">
               powered by Keystone
@@ -87,7 +87,7 @@ export default function Shell() {
             <button
               key={id}
               onClick={() => setScreen(id)}
-              className={`block w-full border-l-2 px-3 py-1.5 text-left text-sm ${
+              className={`block w-full border-l-2 px-3 py-2 text-left text-sm ${
                 screen === id
                   ? 'border-brass font-medium'
                   : 'border-transparent text-greyx hover:text-ink'
@@ -100,7 +100,7 @@ export default function Shell() {
         {/* F §2.3: logout returns to the landing Home; data persists. */}
         <div className="mt-8 border-t rule pt-4">
           {session?.email && (
-            <div className="mb-1.5 truncate text-[11px] text-greyx" title={session.email}>
+            <div className="mb-2 truncate text-[11px] text-greyx" title={session.email}>
               {session.email}
             </div>
           )}
@@ -126,7 +126,7 @@ export default function Shell() {
             <span className="text-greyx">Books to</span>
             <span className="font-medium">{formatDate(world.today)}</span>
             <span
-              className="text-[10px] uppercase tracking-[0.08em] text-greyx"
+              className="text-[10px] uppercase tracking-[0.1em] text-greyx"
               title="Every figure folds from the append-only journal — the audit trail is the architecture."
             >
               {dataSource === 'api' ? '⟳ Synced' : '⟳ Up to date'}
@@ -196,7 +196,7 @@ function NotificationBell() {
         onClick={() => setOpen(!open)}
         title="Notifications"
         aria-label={`Notifications — ${actionable} need action`}
-        className="relative border rule px-2 py-0.5 text-xs text-greyx hover:border-ink hover:text-ink"
+        className="relative border rule px-2 py-1 text-xs text-greyx hover:border-ink hover:text-ink"
       >
         ◷ {notices.length}
         {actionable > 0 && (
@@ -230,7 +230,7 @@ function NotificationBell() {
                   />
                   <span className="font-medium">{n.title}</span>
                 </div>
-                <div className="mt-0.5 truncate pl-4 text-xs text-greyx">{n.detail}</div>
+                <div className="mt-1 truncate pl-4 text-xs text-greyx">{n.detail}</div>
               </button>
             ))}
           </div>

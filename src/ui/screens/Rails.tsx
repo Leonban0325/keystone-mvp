@@ -287,13 +287,13 @@ export default function Rails() {
         : 'Rent collection (SDD)'
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex items-baseline justify-between">
         <h1 className="text-xl font-semibold tracking-tight">Payment processing</h1>
         <Badge tone="ink">{PARTNER_BANK.name}</Badge>
       </div>
 
-      <div className="grid grid-cols-5 gap-5">
+      <div className="grid grid-cols-5 gap-4">
         {/* §1.3 — two-phase settlement, real states, real postings */}
         <Card title={`Processing — ${flowTitle}`} className="col-span-3">
           {!selected && (
@@ -332,7 +332,7 @@ export default function Rails() {
                         <div className="tabular-nums">
                           {formatDate(step.at)} · {step.time}
                         </div>
-                        <div className="mt-0.5">{step.system}</div>
+                        <div className="mt-1">{step.system}</div>
                       </div>
                       <div>
                         <div className="flex items-center gap-2 text-sm">
@@ -346,15 +346,15 @@ export default function Rails() {
                           )}
                         </div>
                         {shown && step.detail && (
-                          <div className="mt-0.5 text-xs text-greyx">{step.detail}</div>
+                          <div className="mt-1 text-xs text-greyx">{step.detail}</div>
                         )}
                         {shown && step.postings && (
-                          <table className="mt-1.5 w-full border rule bg-white/50 text-[11px]">
+                          <table className="mt-2 w-full border rule bg-white/50 text-[11px]">
                             <tbody>
                               {step.postings.postings.map((p, pi) => (
                                 <tr key={pi}>
-                                  <td className="px-2 py-0.5 font-mono">{p.account}</td>
-                                  <td className="px-2 py-0.5 text-right tabular-nums">
+                                  <td className="px-2 py-1 font-mono">{p.account}</td>
+                                  <td className="px-2 py-1 text-right tabular-nums">
                                     {p.direction === 'debit' ? `D ${eur(p.amountCents)}` : `C ${eur(p.amountCents)}`}
                                   </td>
                                 </tr>
@@ -378,7 +378,7 @@ export default function Rails() {
           )}
         </Card>
 
-        <div className="col-span-2 space-y-5">
+        <div className="col-span-2 space-y-4">
           <Card title={`In flight now — ${pending.length}`}>
             {pending.length === 0 && (
               <EmptyState
@@ -390,11 +390,11 @@ export default function Rails() {
               <tbody>
                 {pending.slice(0, 6).map((p) => (
                   <tr key={p.intent.id} className="border-t rule first:border-t-0">
-                    <td className="max-w-44 truncate py-1.5 text-xs">{p.intent.memo}</td>
-                    <td className="py-1.5 text-right text-xs tabular-nums">
+                    <td className="max-w-44 truncate py-2 text-xs">{p.intent.memo}</td>
+                    <td className="py-2 text-right text-xs tabular-nums">
                       {eur(p.intent.postings[0].amountCents)}
                     </td>
-                    <td className="py-1.5 text-right">
+                    <td className="py-2 text-right">
                       <Button tone="quiet" onClick={() => setConfirming({ id: p.intent.id, outcome: 'settle' })}>
                         Settle
                       </Button>{' '}
@@ -423,7 +423,7 @@ export default function Rails() {
                         <span className="inline-block h-2 w-2 rounded-full bg-[#3D6B47]" />
                         <span className="font-medium">{c.name}</span>
                       </div>
-                      <div className="mt-0.5 pl-4 text-[11px] text-greyx">{c.sub}</div>
+                      <div className="mt-1 pl-4 text-[11px] text-greyx">{c.sub}</div>
                     </td>
                     <td className="py-2 text-right align-top text-[11px] text-greyx">
                       <div>Active</div>

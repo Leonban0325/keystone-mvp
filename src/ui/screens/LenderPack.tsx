@@ -26,7 +26,7 @@ export default function LenderPack() {
   const ltvStatus = ltv > pack.covenants.ltvMax ? 'breach' : ltvHeadroom < 0.01 ? 'amber' : 'ok'
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold tracking-tight">Refinancing readiness</h1>
         <Button tone="primary" onClick={() => setPackOpen(!packOpen)}>
@@ -35,7 +35,7 @@ export default function LenderPack() {
       </div>
       <div className="text-sm text-greyx">{pack.assetLabel}</div>
 
-      <div className="grid grid-cols-4 gap-5">
+      <div className="grid grid-cols-4 gap-4">
         <Tile
           label={`DSCR (covenant ≥ ${pack.covenants.dscrMin.toFixed(2)})`}
           value={dscr.toFixed(2)}

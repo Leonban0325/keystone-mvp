@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useApp } from '../store'
 import { eur, eurCompact, formatDate } from '../format'
-import { Badge, Button, Card } from '../components'
+import { Badge, Button, Card, Chevron, StatusDot, StatusTone } from '../components'
 import { SeedLease } from '../../engine/seed/types'
 import { Jurisdiction } from '../../engine/ledger/types'
 import { calculateRevision } from '../../engine/indexation/calculator'
 import { upcomingLeaseEvents, rentSparkline } from '../../engine/analytics'
 import { extractLease, ExtractionResult } from '../../ai/extract'
-import PropertyMap, { ComplianceTone } from '../PropertyMap'
 import { Sparkline } from '../charts'
-import { regionOf } from '../regions'
+import { countryOf, regionOf } from '../regions'
 import { Property } from '../../engine/seed/types'
 import { Finding } from '../../engine/compliance/types'
 import VerificationPanel from '../VerificationPanel'
@@ -21,7 +20,6 @@ export default function Leases() {
   const [selected, setSelected] = useState<string | null>(null)
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null)
   const [wizardOpen, setWizardOpen] = useState(false)
-  const [view, setView] = useState<'list' | 'map'>('list')
 
   // Cmd-K deep link: property → its detail card.
   useEffect(() => {
@@ -31,61 +29,27 @@ export default function Leases() {
   }, [])
 
   const findings = world.findings()
-  const statusByProperty = useMemo(() => {
-    const map = new Map<string, ComplianceTone>()
-    for (const finding of findings) {
-      if (finding.severity === 'info') continue
-      const lease = world.state.leases.find((l) => l.id === finding.leaseId)
-      if (!lease) continue
-      const current = map.get(lease.propertyId)
-      if (finding.severity === 'violation') map.set(lease.propertyId, 'red')
-      else if (current !== 'red') map.set(lease.propertyId, 'amber')
-    }
-    return map
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [findings, world])
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold tracking-tight">Properties & Leases</h1>
-        <div className="flex gap-2">
-          <Button tone="quiet" onClick={() => setView(view === 'list' ? 'map' : 'list')}>
-            {view === 'list' ? 'Map view' : 'List view'}
-          </Button>
-          <Button tone="primary" onClick={() => setWizardOpen(!wizardOpen)}>
-            {wizardOpen ? 'Close wizard' : 'New lease'}
-          </Button>
-        </div>
+        <Button tone="primary" onClick={() => setWizardOpen(!wizardOpen)}>
+          {wizardOpen ? 'Close wizard' : 'New lease'}
+        </Button>
       </div>
 
       {wizardOpen && <NewLeaseWizard onDone={() => setWizardOpen(false)} />}
 
       <EntityVerification />
 
-      {view === 'map' && (
-        <Card title="Portfolio map — pins colored by compliance">
-          <PropertyMap
-            statusByProperty={statusByProperty}
-            selected={selectedProperty}
-            onSelect={setSelectedProperty}
-          />
-        </Card>
-      )}
-
-      {view === 'map' && selectedProperty && (
-        <PropertyCard propertyId={selectedProperty} onClose={() => setSelectedProperty(null)} />
-      )}
-
-      {view === 'list' && (
-        <RegionalList
-          findings={findings}
-          selectedProperty={selectedProperty}
-          onSelectProperty={setSelectedProperty}
-          selectedLease={selected}
-          onSelectLease={setSelected}
-        />
-      )}
+      <RegionalList
+        findings={findings}
+        selectedProperty={selectedProperty}
+        onSelectProperty={setSelectedProperty}
+        selectedLease={selected}
+        onSelectLease={setSelected}
+      />
     </div>
   )
 }
@@ -115,7 +79,7 @@ function EntityVerification() {
           ) : (
             <Badge tone="grey">Not verified</Badge>
           )}
-          <span className="text-greyx">{open ? '▾' : '▸'}</span>
+          <Chevron open={open} />
         </span>
       </button>
       {open && (
@@ -130,10 +94,12 @@ function EntityVerification() {
 const ROW_CAP = 30
 
 /**
- * G §2: properties group by region under collapsible headers with a
- * per-region summary; a property's detail expands INLINE directly below its
- * own row — never at the bottom of the page. Collapsed regions render
- * nothing and long regions cap at 30 rows, so hundreds of units stay fast.
+ * G §2 + J §2.3: the grouping IS the view — country → region → city, each
+ * group a clean section with a summary line and a compliance status dot
+ * (the tones the old map pins carried, now legible). A property's detail
+ * expands INLINE directly below its own row — never at the bottom of the
+ * page. Collapsed regions render nothing and long regions cap at 30 rows,
+ * so hundreds of units stay fast.
  */
 function RegionalList(props: {
   findings: Finding[]
@@ -146,21 +112,32 @@ function RegionalList(props: {
   const [openRegions, setOpenRegions] = useState<Set<string> | null>(null)
   const [showAll, setShowAll] = useState<Set<string>>(new Set())
 
-  const regions = useMemo(() => {
-    const byRegion = new Map<string, Property[]>()
+  const countries = useMemo(() => {
+    const byCountry = new Map<string, Map<string, Property[]>>()
     for (const property of world.state.persona.properties) {
+      const country = countryOf(property.jurisdiction)
       const region = regionOf(property.city, property.jurisdiction)
-      byRegion.set(region, [...(byRegion.get(region) ?? []), property])
+      const regions = byCountry.get(country) ?? new Map<string, Property[]>()
+      regions.set(region, [...(regions.get(region) ?? []), property])
+      byCountry.set(country, regions)
     }
-    return [...byRegion.entries()].sort((a, b) => b[1].length - a[1].length)
+    return [...byCountry.entries()]
+      .map(([name, regions]) => ({
+        name,
+        regions: [...regions.entries()].sort((a, b) => b[1].length - a[1].length),
+        units: [...regions.values()].reduce((s, list) => s + list.length, 0),
+      }))
+      .sort((a, b) => b.units - a.units)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [world])
+
+  const allRegions = countries.flatMap((c) => c.regions)
 
   // Small portfolios open everything; large ones open the biggest region.
   const open =
     openRegions ??
     new Set(
-      (world.state.persona.properties.length <= 60 ? regions : regions.slice(0, 1)).map(
+      (world.state.persona.properties.length <= 60 ? allRegions : allRegions.slice(0, 1)).map(
         ([name]) => name,
       ),
     )
@@ -182,74 +159,108 @@ function RegionalList(props: {
     setOpenRegions(next)
   }
 
+  const summarize = (properties: Property[]) => {
+    const leases = world.state.leases.filter((l) => properties.some((p) => p.id === l.propertyId))
+    const active = leases.filter(
+      (l) => l.startDate <= world.today && (!l.moveOutDate || l.moveOutDate > world.today),
+    )
+    const deposits = active.reduce(
+      (s, l) => s + world.journal.balance(`liabilities:deposits_held:${l.id}`),
+      0,
+    )
+    const regionFindings = props.findings.filter(
+      (f) => f.severity !== 'info' && leases.some((l) => l.id === f.leaseId),
+    )
+    const tone: StatusTone = regionFindings.some((f) => f.severity === 'violation')
+      ? 'red'
+      : regionFindings.length > 0
+        ? 'amber'
+        : 'green'
+    return { active, deposits, openFindings: regionFindings.length, tone }
+  }
+
   return (
     <Card>
-      {regions.map(([name, properties]) => {
-        const leases = world.state.leases.filter((l) =>
-          properties.some((p) => p.id === l.propertyId),
-        )
-        const active = leases.filter(
-          (l) => l.startDate <= world.today && (!l.moveOutDate || l.moveOutDate > world.today),
-        )
-        const deposits = active.reduce(
-          (s, l) => s + world.journal.balance(`liabilities:deposits_held:${l.id}`),
-          0,
-        )
-        const openFindings = props.findings.filter(
-          (f) => f.severity !== 'info' && leases.some((l) => l.id === f.leaseId),
-        ).length
-        const isOpen = open.has(name)
-        const visible = showAll.has(name) ? properties : properties.slice(0, ROW_CAP)
+      {countries.map((country) => {
+        const countrySummary = summarize(country.regions.flatMap(([, list]) => list))
         return (
-          <div key={name} className="border-b rule last:border-b-0">
-            <button
-              className="flex w-full items-baseline justify-between gap-4 py-2.5 text-left hover:bg-white/40"
-              onClick={() => toggleRegion(name)}
-            >
-              <span className="text-sm font-semibold">
-                <span className="mr-2 inline-block w-3 text-greyx">{isOpen ? '▾' : '▸'}</span>
-                {name}
+          <div key={country.name} className="border-b rule py-2 last:border-b-0">
+            <div className="flex items-baseline justify-between gap-4 py-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-greyx">
+                {country.name}
               </span>
-              <span className="text-xs tabular-nums text-greyx">
-                {properties.length} unit{properties.length === 1 ? '' : 's'} ·{' '}
-                {properties.length ? Math.round((active.length / properties.length) * 100) : 0}%
-                occupied · {eurCompact(deposits)} held ·{' '}
-                {openFindings === 0
+              <span className="flex items-baseline gap-2 text-xs tabular-nums text-greyx">
+                {country.units} unit{country.units === 1 ? '' : 's'} ·{' '}
+                {countrySummary.openFindings === 0
                   ? 'clean'
-                  : `${openFindings} open finding${openFindings === 1 ? '' : 's'}`}
+                  : `${countrySummary.openFindings} open finding${countrySummary.openFindings === 1 ? '' : 's'}`}{' '}
+                <StatusDot tone={countrySummary.tone} />
               </span>
-            </button>
-            {isOpen && (
-              <div className="pb-2 pl-5">
-                <table className="w-full text-sm">
-                  <tbody>
-                    {visible.map((property) => (
-                      <PropertyRow
-                        key={property.id}
-                        property={property}
-                        findings={props.findings}
-                        expanded={props.selectedProperty === property.id}
-                        onToggle={() =>
-                          props.onSelectProperty(
-                            props.selectedProperty === property.id ? null : property.id,
-                          )
-                        }
-                        selectedLease={props.selectedLease}
-                        onSelectLease={props.onSelectLease}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-                {properties.length > visible.length && (
+            </div>
+            {country.regions.map(([name, properties]) => {
+              const { active, deposits, openFindings, tone } = summarize(properties)
+              const isOpen = open.has(name)
+              const visible = showAll.has(name) ? properties : properties.slice(0, ROW_CAP)
+              return (
+                <div key={name} className="border-t rule">
                   <button
-                    className="mt-1 text-xs text-brass hover:underline"
-                    onClick={() => setShowAll(new Set([...showAll, name]))}
+                    className="flex w-full items-baseline justify-between gap-4 py-3 text-left hover:bg-white/40"
+                    onClick={() => toggleRegion(name)}
                   >
-                    Show all {properties.length} in {name}
+                    <span className="text-sm font-semibold">
+                      <span className="mr-2">
+                        <Chevron open={isOpen} />
+                      </span>
+                      {name}
+                    </span>
+                    <span className="flex items-baseline gap-2 text-xs tabular-nums text-greyx">
+                      <span>
+                        {properties.length} unit{properties.length === 1 ? '' : 's'} ·{' '}
+                        {properties.length
+                          ? Math.round((active.length / properties.length) * 100)
+                          : 0}
+                        % occupied · {eurCompact(deposits)} held ·{' '}
+                        {openFindings === 0
+                          ? 'clean'
+                          : `${openFindings} open finding${openFindings === 1 ? '' : 's'}`}
+                      </span>
+                      <StatusDot tone={tone} />
+                    </span>
                   </button>
-                )}
-              </div>
-            )}
+                  {isOpen && (
+                    <div className="pb-2 pl-4">
+                      <table className="w-full text-sm">
+                        <tbody>
+                          {visible.map((property) => (
+                            <PropertyRow
+                              key={property.id}
+                              property={property}
+                              findings={props.findings}
+                              expanded={props.selectedProperty === property.id}
+                              onToggle={() =>
+                                props.onSelectProperty(
+                                  props.selectedProperty === property.id ? null : property.id,
+                                )
+                              }
+                              selectedLease={props.selectedLease}
+                              onSelectLease={props.onSelectLease}
+                            />
+                          ))}
+                        </tbody>
+                      </table>
+                      {properties.length > visible.length && (
+                        <button
+                          className="mt-1 text-xs text-brass hover:underline"
+                          onClick={() => setShowAll(new Set([...showAll, name]))}
+                        >
+                          Show all {properties.length} in {name}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )
       })}
@@ -283,9 +294,7 @@ function PropertyRow(props: {
         onClick={props.onToggle}
       >
         <td className="py-2 font-medium">{property.label}</td>
-        <td className="py-2">
-          <Badge tone="ink">{property.jurisdiction}</Badge>
-        </td>
+        <td className="py-2 text-greyx">{property.city}</td>
         <td className="max-w-52 truncate py-2">
           {active.length > 0 ? active.map((l) => l.tenantNames[0]).join(', ') : 'vacant'}
         </td>
@@ -355,12 +364,12 @@ function PropertyInlineDetail(props: {
   return (
     <div>
       <div className="grid grid-cols-4 gap-6 text-sm">
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <PField label="Address" value={`${property.label}, ${property.city}`} />
           <PField label="Regime" value={property.jurisdiction} />
           <PField label="Occupancy" value={active.length > 0 ? 'occupied' : 'vacant'} />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <PField label="Deposits held (segregated)" value={eurCompact(deposits)} />
           <PField
             label="Rent roll"
@@ -371,7 +380,7 @@ function PropertyInlineDetail(props: {
             value={findings.length === 0 ? 'clean' : `${findings.length} open finding(s)`}
           />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <PField
             label="Next lease event"
             value={
@@ -416,7 +425,7 @@ function PropertyInlineDetail(props: {
                 </span>
               </span>
               <span className="tabular-nums text-greyx">
-                {eur(l.monthlyRentCents)}/mo {props.selectedLease === l.id ? '▾' : '▸'}
+                {eur(l.monthlyRentCents)}/mo <Chevron open={props.selectedLease === l.id} />
               </span>
             </button>
             {props.selectedLease === l.id && (
@@ -428,72 +437,6 @@ function PropertyInlineDetail(props: {
         ))}
       </div>
     </div>
-  )
-}
-
-/** §7 property detail card — from pin or search hit. */
-function PropertyCard(props: { propertyId: string; onClose: () => void }) {
-  const { world, setScreen, setFocus } = useApp()
-  const property = world.state.persona.properties.find((p) => p.id === props.propertyId)
-  if (!property) return null
-  const leases = world.state.leases.filter((l) => l.propertyId === props.propertyId)
-  const active = leases.filter((l) => !l.moveOutDate || l.moveOutDate > world.today)
-  const deposits = leases.reduce(
-    (s, l) => s + world.journal.balance(`liabilities:deposits_held:${l.id}`),
-    0,
-  )
-  const nextEvent = upcomingLeaseEvents(world, 365).find((e) =>
-    leases.some((l) => l.id === e.leaseId),
-  )
-  const findings = world
-    .findings()
-    .filter((f) => leases.some((l) => l.id === f.leaseId) && f.severity !== 'info')
-
-  return (
-    <Card title={`Property — ${property.label}, ${property.city}`}>
-      <div className="grid grid-cols-4 gap-6 text-sm">
-        <div className="space-y-1.5">
-          <PField label="Regime" value={property.jurisdiction} />
-          <PField label="Units / occupied" value={`${leases.length} / ${active.length}`} />
-          <PField
-            label="Occupancy"
-            value={leases.length ? `${Math.round((active.length / leases.length) * 100)}%` : '—'}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <PField label="Deposits held (segregated)" value={eurCompact(deposits)} />
-          <PField
-            label="Rent roll"
-            value={`${eurCompact(active.reduce((s, l) => s + l.monthlyRentCents, 0))}/mo`}
-          />
-          <PField
-            label="Compliance"
-            value={findings.length === 0 ? 'clean' : `${findings.length} open finding(s)`}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <PField
-            label="Next lease event"
-            value={nextEvent ? `${nextEvent.type} · ${formatDate(nextEvent.date)}` : 'none in 12 months'}
-          />
-          <PField label="Tenants" value={active.map((l) => l.tenantNames[0]).join(', ') || '—'} />
-        </div>
-        <div className="flex flex-col items-end justify-between gap-2">
-          <Button
-            tone="quiet"
-            onClick={() => {
-              setFocus({ entityId: property.entityId })
-              setScreen('money')
-            }}
-          >
-            Money roll-up →
-          </Button>
-          <Button tone="quiet" onClick={props.onClose}>
-            Close
-          </Button>
-        </div>
-      </div>
-    </Card>
   )
 }
 
@@ -517,7 +460,7 @@ function LeaseDetail(props: { leaseId: string }) {
   return (
     <Card title={`Lease detail — ${property?.label}`}>
       <div className="grid grid-cols-3 gap-6 text-sm">
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <Field label="Regime" value={`${lease.jurisdiction} · ${lease.furnished ? 'furnished' : 'unfurnished'}`} />
           <Field label="Start date" value={formatDate(lease.startDate)} />
           {lease.moveOutDate && <Field label="Move-out" value={formatDate(lease.moveOutDate)} />}

@@ -32,7 +32,7 @@ export default function OwnerRollup() {
   )
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold tracking-tight">Owner roll-up</h1>
         <div className="flex items-center gap-3">
@@ -48,7 +48,7 @@ export default function OwnerRollup() {
 
       {importOpen && <RentRollImportWizard onDone={() => setImportOpen(false)} />}
 
-      <div className="grid grid-cols-4 gap-5">
+      <div className="grid grid-cols-4 gap-4">
         <Card>
           <div className="text-[11px] uppercase tracking-[0.14em] text-greyx">Balances under management</div>
           <div className="mt-1 text-2xl font-semibold">{eurCompact(world.dashboard().balancesCents)}</div>
@@ -126,12 +126,12 @@ function OwnerRow(props: {
   return (
     <>
       <tr className="cursor-pointer border-t rule hover:bg-white/50" onClick={props.onToggle}>
-        <td className="py-1.5 font-medium">{props.name}</td>
-        <td className="py-1.5 text-right">{props.units}</td>
-        <td className="py-1.5 text-right">{eurCompact(props.balances)}</td>
-        <td className="py-1.5 text-right">{eurCompact(props.rentYr)}</td>
-        <td className="py-1.5 text-right">{eurCompact(props.feeYr)}</td>
-        <td className="py-1.5 text-center">
+        <td className="py-2 font-medium">{props.name}</td>
+        <td className="py-2 text-right">{props.units}</td>
+        <td className="py-2 text-right">{eurCompact(props.balances)}</td>
+        <td className="py-2 text-right">{eurCompact(props.rentYr)}</td>
+        <td className="py-2 text-right">{eurCompact(props.feeYr)}</td>
+        <td className="py-2 text-center">
           {props.issues > 0 ? (
             <span className="inline-flex items-center gap-1">
               <span className="inline-block h-2 w-2 rounded-full bg-[#B4392E]" />
@@ -141,7 +141,7 @@ function OwnerRow(props: {
             <span className="inline-block h-2 w-2 rounded-full bg-[#3D6B47]" />
           )}
         </td>
-        <td className="py-1.5 text-right text-xs text-brass">{props.expanded ? 'close' : 'drill down'}</td>
+        <td className="py-2 text-right text-xs text-brass">{props.expanded ? 'close' : 'drill down'}</td>
       </tr>
       {props.expanded && (
         <tr className="border-t rule bg-white/60">
