@@ -122,8 +122,23 @@ describe('cash-flow folds', () => {
   })
 })
 
+describe('H §3.2 — headline metrics fold from events, not constants', () => {
+  it('NOI = rent roll − ACTUAL trailing-12-month spend fold', async () => {
+    const { trailingSpendCents } = await import('../src/engine/analytics')
+    const world = new DemoWorld(buildPersona('a1-meridian'))
+    const d = world.dashboard()
+    const rent =
+      world.state.leases
+        .filter((l) => l.startDate <= world.today && (!l.moveOutDate || l.moveOutDate > world.today))
+        .reduce((s, l) => s + l.monthlyRentCents, 0) * 12
+    expect(d.noiAnnualCents).toBe(rent - trailingSpendCents(world))
+    // …and NOT the flat budget scalar it used to be.
+    expect(d.noiAnnualCents).not.toBe(rent - world.state.persona.cardMonthlySpendCents * 12)
+  })
+})
+
 describe('§5 savings engine v2', () => {
-  it('A1 and B1 show ≥5 opportunities, all with logic trails and confidence', () => {
+  it('A1 and B1 show ≥5 opportunities with logic trails, ranked by expected value (H §1)', () => {
     for (const id of ['a1-meridian', 'b1-haussmann']) {
       const world = new DemoWorld(buildPersona(id))
       const opportunities = world.savingsOpportunities()
@@ -132,9 +147,11 @@ describe('§5 savings engine v2', () => {
       expect(detectors.size).toBe(5) // all five detectors fire
       for (const o of opportunities) {
         expect(o.logicTrail.length).toBeGreaterThan(10)
-        expect(o.confidence).toBeGreaterThan(0.5)
-        expect(o.confidence).toBeLessThanOrEqual(1)
+        expect(o).not.toHaveProperty('confidence') // deleted, not just hidden
       }
+      // Largest saving first — a simple, defensible ordering.
+      const values = opportunities.map((o) => o.savingsCents)
+      expect(values).toEqual([...values].sort((a, b) => b - a))
     }
   })
 

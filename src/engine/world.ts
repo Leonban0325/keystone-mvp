@@ -1,6 +1,6 @@
 import { Journal, posting } from './ledger/journal'
 import { ACCOUNTS, JournalEvent } from './ledger/types'
-import { addDays } from './compliance/dates'
+import { addDays, addMonths } from './compliance/dates'
 import { ownerYieldYtdCents, revenueRunRate } from './analytics'
 import { DemoClock } from './simulators/clock'
 import { BASE_DFR, PRICING, splitYield } from './simulators/economics'
@@ -698,6 +698,15 @@ export class DemoWorld {
     const interchange = Math.round(runRate.interchangeAnnualCents / units)
     const savings = Math.round(runRate.savingsShareAnnualCents / units)
     const annualRent = activeLeases(s, this.today).reduce((sum, l) => sum + l.monthlyRentCents, 0) * 12
+    // H §3.2: NOI folds from the ACTUAL lumpy spend history, not a budget scalar.
+    const windowEnd = this.today.slice(0, 8) + '01'
+    const windowStart = addMonths(windowEnd, -12)
+    let spend12 = 0
+    for (const event of this.journal.all) {
+      if (event.kind === 'card_spend' && event.date >= windowStart && event.date < windowEnd) {
+        spend12 += event.postings[0].amountCents
+      }
+    }
 
     return {
       unitCount: units,
@@ -710,7 +719,7 @@ export class DemoWorld {
       revenuePerUnit: { saas, nim, interchange, savings, total: saas + nim + interchange + savings },
       ownerYieldPerUnitCents: Math.round((balances * ownerRate) / units),
       ownerYieldYtdCents: ownerYieldYtdCents(this),
-      noiAnnualCents: annualRent - s.persona.cardMonthlySpendCents * 12,
+      noiAnnualCents: annualRent - spend12,
       pricingMode: failsafe ? 'flat_fee' : 'yield_shared',
       dfr: s.dfr,
     }

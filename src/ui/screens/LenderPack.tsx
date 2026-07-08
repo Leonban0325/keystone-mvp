@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useApp } from '../store'
 import { eur, eurCompact } from '../format'
 import { Badge, Button, Card } from '../components'
+import { trailingSpendCents } from '../../engine/analytics'
 
 /** B3 · refinancing-readiness: pristine financials on demand, before the refi wall. */
 export default function LenderPack() {
@@ -12,7 +13,10 @@ export default function LenderPack() {
   if (!pack) return <div className="text-sm text-greyx">No lender pack configured for this persona.</div>
 
   const activeLeases = world.state.leases.filter((l) => !l.moveOutDate)
-  const noiAnnual = Math.round(activeLeases.reduce((s, l) => s + l.monthlyRentCents, 0) * 12 * 0.8)
+  // H §3.2: NOI folds from actual rent roll − actual trailing spend, not a 20% assumption.
+  const grossAnnual = activeLeases.reduce((s, l) => s + l.monthlyRentCents, 0) * 12
+  const opexAnnual = trailingSpendCents(world)
+  const noiAnnual = grossAnnual - opexAnnual
   const dscr = noiAnnual / pack.debtServiceAnnualCents
   const ltv = pack.loanCents / pack.valueCents
   const arrears = world.dashboard().arrearsCents
@@ -74,8 +78,8 @@ export default function LenderPack() {
               <h3 className="mb-2 font-semibold">Income statement (annualised)</h3>
               <table className="w-full">
                 <tbody>
-                  <Row label="Gross rental income" value={eurCompact(Math.round(noiAnnual / 0.8))} />
-                  <Row label="Operating expenses (20%)" value={`− ${eurCompact(Math.round(noiAnnual / 0.8) - noiAnnual)}`} />
+                  <Row label="Gross rental income" value={eurCompact(grossAnnual)} />
+                  <Row label="Operating expenses (trailing 12 months)" value={`− ${eurCompact(opexAnnual)}`} />
                   <Row label="Net operating income" value={eurCompact(noiAnnual)} bold />
                   <Row label="Debt service" value={`− ${eurCompact(pack.debtServiceAnnualCents)}`} />
                   <Row label="DSCR" value={dscr.toFixed(2)} bold />

@@ -302,7 +302,8 @@ export interface BridgeStep {
 export function noiBridge(world: DemoWorld): BridgeStep[] {
   const active = world.state.leases.filter((l) => !l.moveOutDate || l.moveOutDate > world.today)
   const rent = active.reduce((s, l) => s + l.monthlyRentCents, 0) * 12
-  const opex = world.state.persona.cardMonthlySpendCents * 12
+  // H §3.2: opex is the ACTUAL trailing-12-month spend fold, not a budget scalar.
+  const opex = trailingSpendCents(world)
   const savings = world
     .savingsOpportunities()
     .filter((o) => o.executed && o.kind === 'recurring')
@@ -318,6 +319,19 @@ export function noiBridge(world: DemoWorld): BridgeStep[] {
   if (savings > 0) push('Savings executed', savings)
   steps.push({ label: 'NOI', delta: running, total: running })
   return steps
+}
+
+/** Trailing-12-month card/vendor spend, folded from the journal (H §3.2). */
+export function trailingSpendCents(world: DemoWorld): number {
+  const windowEnd = world.today.slice(0, 8) + '01'
+  const windowStart = addMonths(windowEnd, -12)
+  let total = 0
+  for (const event of world.journal.all) {
+    if (event.kind === 'card_spend' && event.date >= windowStart && event.date < windowEnd) {
+      total += event.postings[0].amountCents
+    }
+  }
+  return total
 }
 
 // ── institution widgets ──────────────────────────────────────────────────────

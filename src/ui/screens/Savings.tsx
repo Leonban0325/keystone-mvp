@@ -77,7 +77,6 @@ export default function Savings() {
               <th className="py-1 font-medium">Opportunity</th>
               <th className="py-1 font-medium">Logic trail</th>
               <th className="py-1 text-right font-medium">Expected</th>
-              <th className="py-1 text-right font-medium">Confidence</th>
               <th className="py-1 text-right font-medium"></th>
             </tr>
           </thead>
@@ -102,11 +101,6 @@ export default function Savings() {
                     {o.kind === 'recurring' ? '/yr' : ' one-off'}
                   </span>
                   <div className="text-xs text-greyx">fee {eur(o.successFeeCents)}</div>
-                </td>
-                <td className="py-2 text-right">
-                  <Badge tone={o.confidence > 0.85 ? 'green' : 'brass'}>
-                    {(o.confidence * 100).toFixed(0)}%
-                  </Badge>
                 </td>
                 <td className="py-2 text-right">
                   {o.executed ? (
