@@ -249,6 +249,47 @@ export class ViewErrorBoundary extends Component<
   }
 }
 
+
+/**
+ * G §1: the single honest disclosure — plainly states what is real and what
+ * is represented. One click away, never stamped on a working screen.
+ */
+export function AboutPrototypeDialog(props: { onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-ink/25"
+      onClick={props.onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="About this prototype"
+    >
+      <div className="w-full max-w-lg border rule bg-paper p-6" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-semibold uppercase tracking-[0.12em]">About this prototype</h3>
+        <div className="mt-3 space-y-3 text-sm leading-relaxed text-greyx">
+          <p>
+            Keystone is a functioning prototype. The compliance engine, the double-entry ledger
+            and the application logic are real: every figure folds from an append-only journal,
+            every finding traces to a versioned statutory rule, and every action posts real
+            accounting entries.
+          </p>
+          <p>
+            Banking, payment, card and identity rails are{' '}
+            <span className="text-ink">represented, not connected to live third-party
+            services</span>. Money movement, settlement timing and verification results are
+            produced by deterministic models over a curated twelve-month dataset — no live bank,
+            scheme or identity provider is called.
+          </p>
+        </div>
+        <div className="mt-5 text-right">
+          <Button tone="quiet" onClick={props.onClose}>
+            Close
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /** Compliance status ring: green = clean leases, amber = warnings, red = violations. */
 export function StatusRing(props: { total: number; warnings: number; violations: number }) {
   const { total, warnings, violations } = props

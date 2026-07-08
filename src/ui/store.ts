@@ -237,7 +237,7 @@ export const useApp = create<AppState>((set, get) => {
     login: async (email, password) => {
       const viaApi = await loginViaApi(email, password)
       const credential = viaApi ?? findCredential(email, password)
-      if (!credential) return 'Unknown demo credential — use one of the sign-ins listed below.'
+      if (!credential) return 'Unknown credentials — use one of the sign-ins listed below.'
       const session: Session = {
         personaId: credential.personaId,
         role: credential.role,

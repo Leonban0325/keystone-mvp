@@ -119,12 +119,7 @@ export default function Money() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-xl font-semibold tracking-tight">Money</h1>
-        <Button tone="quiet" onClick={() => setScreen('rails')}>
-          View money rails →
-        </Button>
-      </div>
+      <h1 className="text-xl font-semibold tracking-tight">Money</h1>
 
       {/* §4 · roll-up before drill-down */}
       <Card title="Roll-up — the journal folded by dimension">
@@ -210,7 +205,7 @@ export default function Money() {
         <Card title={`Pending settlements — ${pending.length}`}>
           {pending.length === 0 && (
             <div className="text-sm text-greyx">
-              Nothing in flight. SDD collections fire on the 3rd — advance the clock.
+              Nothing in flight. Collections present on each lease's payment day.
             </div>
           )}
           <div className="max-h-64 overflow-y-auto">
@@ -341,13 +336,13 @@ function EventRow(props: {
           {props.onRails && (
             <button
               className="ml-2 text-xs text-brass hover:underline"
-              title="Open on the money-rails view"
+              title="View processing detail"
               onClick={(e) => {
                 e.stopPropagation()
                 props.onRails!()
               }}
             >
-              rails →
+              processing →
             </button>
           )}
         </td>

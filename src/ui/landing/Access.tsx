@@ -4,8 +4,8 @@ import { Badge, Button } from '../components'
 import { CREDENTIALS, DEMO_PASSWORD } from '../../access/credentials'
 
 /**
- * Client Access (Addendum F §2): a branded login with a visible demo-access
- * panel — intentional demo credentials, not a security hole. One click signs
+ * Client Access (Addendum F §2, reframed by G §8): a branded login with a
+ * visible reviewer-access panel. One click signs
  * in as any segment; each credential sets the RBAC role and loads that
  * persona's dataset scope.
  */
@@ -68,14 +68,14 @@ export default function Access() {
 
       <div className="col-span-3 border rule bg-white/40 p-5">
         <div className="flex items-center justify-between">
-          <h2 className="text-[11px] uppercase tracking-[0.16em] text-greyx">Demo access</h2>
+          <h2 className="text-[11px] uppercase tracking-[0.16em] text-greyx">Reviewer access</h2>
           <Badge tone="brass">
             password: {DEMO_PASSWORD}
           </Badge>
         </div>
         <p className="mt-2 text-xs text-greyx">
-          This is a demonstration environment. Enter any client segment with one click — each
-          login scopes the app to that organisation's role and dataset.
+          Enter any client workspace with one click — each sign-in scopes the session to that
+          organisation's role and data.
         </p>
         <div className="mt-4 divide-y rule">
           {CREDENTIALS.map((c) => (

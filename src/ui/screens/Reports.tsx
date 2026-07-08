@@ -90,7 +90,7 @@ export default function Reports() {
         </div>
 
         {lease && property && (
-          <div className="mx-auto max-w-2xl border rule bg-white p-10 text-sm leading-relaxed">
+          <div className="print-artifact mx-auto max-w-2xl border rule bg-white p-10 text-sm leading-relaxed">
             <div className="mb-8 flex justify-between">
               <div>
                 <div className="font-semibold">{world.state.persona.name}</div>

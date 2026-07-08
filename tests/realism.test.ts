@@ -179,6 +179,20 @@ describe('D2 §4 — arrears arcs, not uniform lateness', () => {
   })
 })
 
+describe('G §3 — occupancy fluctuates over a real 12-month window', () => {
+  it('B2 occupancy is computed from lease events and moves within a realistic band', async () => {
+    const { occupancyTrend } = await import('../src/engine/analytics')
+    const world = new DemoWorld(buildPersona('b2-rijnland'))
+    const trend = occupancyTrend(world, 12)
+    expect(trend).toHaveLength(12)
+    const units = world.state.persona.properties.length
+    const values = trend.map((t) => t.occupied)
+    expect(new Set(values).size).toBeGreaterThanOrEqual(3) // rises and falls, not flat
+    expect(Math.min(...values)).toBeGreaterThanOrEqual(Math.round(units * 0.9))
+    expect(Math.max(...values)).toBeLessThanOrEqual(units)
+  })
+})
+
 describe('D2 §6 — the year has shape', () => {
   it('the rent series shows the mid-year indexation step (fr-p2)', () => {
     const world = new DemoWorld(buildPersona('a1-meridian'))

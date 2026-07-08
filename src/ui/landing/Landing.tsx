@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react'
 import { Route, useApp } from '../store'
-import { Button } from '../components'
+import { AboutPrototypeDialog, Button } from '../components'
 import { PARTNER_BANK } from '../../config'
 
 /**
@@ -21,6 +21,7 @@ const NAV: { route: Route; label: string }[] = [
 
 export default function Landing(props: { section: Route; children?: React.ReactNode }) {
   const { navigate } = useApp()
+  const [aboutOpen, setAboutOpen] = useState(false)
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b rule">
@@ -57,12 +58,15 @@ export default function Landing(props: { section: Route; children?: React.ReactN
       <footer className="border-t rule">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5 text-[11px] text-greyx">
           <span>© 2026 Keystone Financial Technologies · Paris — Amsterdam</span>
-          <span>
-            Demonstration environment — simulated rails, curated data. Nothing on this site is a
-            live regulated service.
-          </span>
+          <button
+            className="underline-offset-2 hover:text-ink hover:underline"
+            onClick={() => setAboutOpen(true)}
+          >
+            About this prototype
+          </button>
         </div>
       </footer>
+      {aboutOpen && <AboutPrototypeDialog onClose={() => setAboutOpen(false)} />}
     </div>
   )
 }
@@ -339,11 +343,11 @@ function Contact() {
           </div>
           <div>
             <div className="text-[10px] uppercase tracking-[0.14em] text-greyx">Enterprise</div>
-            <div className="mt-0.5">enterprise@keystone.demo</div>
+            <div className="mt-0.5">enterprise@keystone.eu</div>
           </div>
           <div>
             <div className="text-[10px] uppercase tracking-[0.14em] text-greyx">Partnerships</div>
-            <div className="mt-0.5">partners@keystone.demo</div>
+            <div className="mt-0.5">partners@keystone.eu</div>
           </div>
         </div>
       </div>
@@ -352,8 +356,7 @@ function Contact() {
           <div className="border rule bg-white/40 p-6 text-sm">
             <div className="font-semibold">Request received.</div>
             <div className="mt-1 text-greyx">
-              The desk will come back to you within one business day. (Demo environment — the
-              request was logged, not sent.)
+              The desk will come back to you within one business day.
             </div>
           </div>
         ) : (

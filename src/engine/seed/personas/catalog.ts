@@ -2,7 +2,7 @@ import { mulberry32, intBetween, pick } from '../rng'
 import { PARTNER_BANK } from '../../../config'
 import { DFR_PATH } from '../../simulators/economics'
 import { Entity, PersonaSeed, Property, SeedLease, StoryAction } from '../types'
-import { entityOf, generateUnits, openingEvents, statutoryDepositCents, tenantName, STREETS } from './portfolio'
+import { entityOf, generateTurnover, generateUnits, openingEvents, statutoryDepositCents, tenantName, STREETS } from './portfolio'
 
 /**
  * Persona catalog — Addendum A (docs/CLIENT-PERSONAS.md).
@@ -100,6 +100,8 @@ export function buildA3Falkenrath(): PersonaSeed {
   })
   // Story: one lease where a lump-sum Kaution was demanded (§551 Abs. 2 violation).
   leases[4].lumpSumDemanded = true
+  // Natural turnover (G §3): occupancy moves with real lease events.
+  const storyActions = generateTurnover({ leases, exclude: new Set([leases[4].id]) })
 
   return {
     id: 'a3-falkenrath',
@@ -111,6 +113,7 @@ export function buildA3Falkenrath(): PersonaSeed {
     epoch: EPOCH,
     historyFrom: YEAR_BACK,
     dfrPath: DFR_PATH,
+    storyActions,
     entities: [entity],
     properties,
     leases,
@@ -244,6 +247,17 @@ export function buildB1Haussmann(): PersonaSeed {
     { date: '2026-03-12', type: 'execute_savings', opportunityId: 'insurance-b1-haussmann', propertyId: properties[0].id, feeCents: 32_625 },
     { date: '2026-04-10', type: 'execute_savings', opportunityId: 'utility-b1-haussmann', propertyId: properties[0].id, feeCents: 73_500 },
   )
+  // Natural turnover across the year (G §3) — storied leases excluded.
+  const storied = new Set<string>([
+    leases[3].id,
+    leases[counts[0] + 2].id,
+    late.id,
+    vacated.id,
+    leases[500].id,
+    ...Object.keys(forceRFrom),
+    ...cycleLeases.map((i) => leases[i].id),
+  ])
+  storyActions.push(...generateTurnover({ leases, exclude: storied, rate: 0.07 }))
 
   return {
     id: 'b1-haussmann',
@@ -323,13 +337,21 @@ export function buildB2Rijnland(): PersonaSeed {
     { date: '2026-05-20', type: 'catch_up', leaseId: leases[200].id, amountCents: 28_000 },
     { date: '2026-06-20', type: 'catch_up', leaseId: leases[200].id, amountCents: 28_000 },
   ]
+  // Social stock still turns over (G §3) — storied leases excluded.
+  storyActions.push(
+    ...generateTurnover({
+      leases,
+      exclude: new Set([leases[10].id, leases[50].id, leases[90].id, leases[130].id, leases[200].id]),
+      rate: 0.06,
+    }),
+  )
 
   return {
     id: 'b2-rijnland',
     segment: 'B',
     role: 'institution',
     name: 'Stichting Wonen Rijnland',
-    subtitle: 'Woningcorporatie · 12,000 units (400-unit sampled slice) · Leiden',
+    subtitle: 'Woningcorporatie · 400 units under management · Leiden',
     pricingTier: 'enterprise',
     epoch: EPOCH,
     historyFrom: YEAR_BACK,
@@ -350,7 +372,7 @@ export function buildB2Rijnland(): PersonaSeed {
     cardMonthlySpendCents: 900_000,
     themeOverride: { brand: '#1F6F43', name: 'Wonen Rijnland' },
     procurement: ['EU data residency', 'SSO (SAML) ready', 'Audit export', 'Huurtoeslag pre-reconciled', 'Social arrears mode'],
-    storyTags: { kyc: 'verified', sampleNote: '400-unit sampled slice of 12,000' },
+    storyTags: { kyc: 'verified' },
   }
 }
 
@@ -380,12 +402,19 @@ export function buildB3Ibervia(): PersonaSeed {
 
   const noiAnnual = leases.reduce((s, l) => s + l.monthlyRentCents, 0) * 12 * 0.8
 
+  // BTR churn (G §3): professionally managed, but tenants still move.
+  const b3Turnover = generateTurnover({
+    leases,
+    exclude: new Set([...vacated.map((l) => l.id), leases[17].id, leases[121].id]),
+    rate: 0.09,
+  })
+
   return {
     id: 'b3-ibervia',
     segment: 'B',
     role: 'institution',
     name: 'Ibervia Living SOCIMI',
-    subtitle: 'Listed BTR · 2,400 units across 6 assets (one 180-unit asset loaded) · Madrid',
+    subtitle: 'Listed BTR · Torre Ibervia · 180 units · Madrid',
     pricingTier: 'enterprise',
     epoch: EPOCH,
     historyFrom: YEAR_BACK,
@@ -395,6 +424,7 @@ export function buildB3Ibervia(): PersonaSeed {
     timingProfile: 'tight',
     storyActions: [
       { date: '2026-02-20', type: 'execute_savings', opportunityId: 'insurance-b3-ibervia', propertyId: 'ib-p1', feeCents: 40_000 },
+      ...b3Turnover,
     ],
     entities: [entity],
     properties,

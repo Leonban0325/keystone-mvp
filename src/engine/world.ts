@@ -19,6 +19,7 @@ import { Finding } from './compliance/types'
 import { mulberry32 } from './seed/rng'
 import { detectOpportunities, SavingsOpportunity } from './savings/detectors'
 import { DunningStage, Entity, PersonaSeed, Property, SeedLease } from './seed/types'
+import { advanceRecord, startRecord, VerificationRecord } from './kyc'
 
 /** Distribution holdback: kept in owner_payable to cover card spend + arrears. */
 const DISTRIBUTION_BUFFER_CENTS = 500_000
@@ -64,6 +65,8 @@ export interface WorldSnapshot {
   /** Entities/properties added by the rent-roll import wizard. */
   extraEntities: Entity[]
   extraProperties: Property[]
+  /** KYC/KYB records (G §5) — verification is earned and persisted. */
+  verifications?: [string, VerificationRecord][]
 }
 
 export interface WorldState {
@@ -77,6 +80,8 @@ export interface WorldState {
   forceRFrom: Map<string, string>
   pendingIntents: PendingCollection[]
   executedSavings: Set<string>
+  /** partyId → KYC/KYB record. Verified is a state reached, never preset. */
+  verifications: Map<string, VerificationRecord>
   rand: () => number
 }
 
@@ -118,6 +123,7 @@ export class DemoWorld {
       ),
       pendingIntents: snapshot?.pendingIntents ?? [],
       executedSavings: new Set(snapshot?.executedSavings ?? []),
+      verifications: new Map(snapshot?.verifications ?? []),
       rand: mulberry32(0x5eed),
     }
     this.extraLeases = snapshot?.extraLeases ?? []
@@ -225,6 +231,7 @@ export class DemoWorld {
       forceRFrom: [...this.state.forceRFrom],
       pendingIntents: this.state.pendingIntents,
       executedSavings: [...this.state.executedSavings],
+      verifications: [...this.state.verifications],
       leases: this.state.leases,
       extraLeases: this.extraLeases,
       extraEntities: this.extraEntities,
@@ -560,6 +567,25 @@ export class DemoWorld {
 
   clearForceR(leaseId: string): void {
     this.state.forceRFrom.delete(leaseId)
+  }
+
+  // ── KYC / KYB (G §5): earned verification over curated data ─────────────
+
+  verification(partyId: string): VerificationRecord | undefined {
+    return this.state.verifications.get(partyId)
+  }
+
+  /** Open a verification case. Gating starts here — no step, no badge. */
+  startVerification(partyId: string, name: string, kind: 'individual' | 'company'): void {
+    if (this.state.verifications.has(partyId)) return
+    this.state.verifications.set(partyId, startRecord(partyId, name, kind))
+  }
+
+  /** Run the next pending gate (one UBO at a time on the KYB path). */
+  advanceVerification(partyId: string): void {
+    const record = this.state.verifications.get(partyId)
+    if (!record) return
+    this.state.verifications.set(partyId, advanceRecord(record, this.today))
   }
 
   // ── Read models ────────────────────────────────────────────────────────

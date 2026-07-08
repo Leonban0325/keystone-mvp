@@ -105,8 +105,7 @@ export default function CardSpend() {
         <Card title="Outlier flags → savings engine" className="col-span-3">
           {outliers.length === 0 && (
             <div className="text-sm text-greyx">
-              No property is spending &gt;2× its trailing mean. Advance the clock to accrue more
-              months of history.
+              No property is spending &gt;2× its trailing mean this month.
             </div>
           )}
           <table className="w-full text-sm">

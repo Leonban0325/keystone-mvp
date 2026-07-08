@@ -1,8 +1,9 @@
 import { Journal, posting } from '../../ledger/journal'
 import { ACCOUNTS, JournalEvent, Jurisdiction } from '../../ledger/types'
+import { addDays } from '../../compliance/dates'
 import { intBetween, pick } from '../rng'
-import { chargesCents, nonRoundAmountCents } from '../../simulators/realism'
-import { Entity, Property, SeedLease } from '../types'
+import { chargesCents, keyedRand, nonRoundAmountCents } from '../../simulators/realism'
+import { Entity, Property, SeedLease, StoryAction } from '../types'
 
 /** Shared portfolio generator for the persona catalog. Fixed-seed RNG in, deterministic out. */
 
@@ -157,4 +158,62 @@ export function openingEvents(cfg: {
 
 export function entityOf(id: string, name: string, kind: Entity['kind'], country: string): Entity {
   return { id, name, kind, country }
+}
+
+/**
+ * Natural tenant turnover across the curated year (Addendum G §3): a share
+ * of leases end mid-year — deposit returned inside the statutory clock, a
+ * void of 3–9 weeks, then a re-let at a slightly higher non-round rent.
+ * Occupancy computed from these REAL move-in/out events rises and falls
+ * within a realistic band instead of sitting flat. Keyed-PRNG deterministic.
+ */
+export function generateTurnover(cfg: {
+  leases: SeedLease[]
+  /** Lease ids that carry curated stories — never churned. */
+  exclude?: Set<string>
+  /** Annual share of leases that turn over (default 8%). */
+  rate?: number
+}): StoryAction[] {
+  const actions: StoryAction[] = []
+  for (const lease of cfg.leases) {
+    if (lease.moveOutDate || cfg.exclude?.has(lease.id)) continue
+    const rand = keyedRand(lease.id, 'turnover')
+    if (rand() >= (cfg.rate ?? 0.08)) continue
+
+    // Move-outs spread Aug–Apr (so the re-let completes inside the window),
+    // weighted towards summer for student-adjacent stock.
+    const monthOffset = rand() < 0.3 ? 1 + Math.floor(rand() * 2) : 3 + Math.floor(rand() * 7)
+    const moveOut = addDays('2025-07-28', Math.floor(monthOffset * 30.4 + rand() * 12))
+    const returned = addDays(moveOut, 4 + Math.floor(rand() * 6)) // inside every clock
+    const relet = addDays(moveOut, 22 + Math.floor(rand() * 42)) // 3–9 week void
+
+    const newRent = nonRoundAmountCents(
+      rand,
+      lease.monthlyRentCents,
+      Math.round(lease.monthlyRentCents * 1.05),
+    )
+    actions.push(
+      { date: moveOut, type: 'move_out', leaseId: lease.id },
+      { date: returned, type: 'return_deposit', leaseId: lease.id },
+      {
+        date: relet,
+        type: 'new_lease',
+        lease: {
+          id: `${lease.id}-t2`,
+          propertyId: lease.propertyId,
+          entityId: lease.entityId,
+          jurisdiction: lease.jurisdiction,
+          furnished: lease.furnished,
+          monthlyRentCents: newRent,
+          chargesCents: lease.chargesCents,
+          depositCents: statutoryDepositCents(lease.jurisdiction, lease.furnished, newRent),
+          startDate: relet,
+          lodgementCertificate:
+            lease.jurisdiction === 'ES' ? `FIANZA-${100_000 + (Math.floor(rand() * 890_000))}` : undefined,
+          tenantNames: [tenantName(rand)],
+        },
+      },
+    )
+  }
+  return actions
 }

@@ -84,6 +84,25 @@ body {
   animation: skeleton-sheen 1.4s ease-in-out infinite;
 }
 
+/* G §4: printing a report outputs ONLY the report artifact — no app chrome. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-artifact,
+  .print-artifact * {
+    visibility: visible;
+  }
+  .print-artifact {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    max-width: none;
+    border: none !important;
+    padding: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .row-flash,
   .toast-in,

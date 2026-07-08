@@ -58,7 +58,7 @@ export default function LenderPack() {
 
       {packOpen && (
         <Card title="Lender pack — generated from the live ledger">
-          <div className="mx-auto max-w-3xl space-y-6 border rule bg-white p-8 text-sm">
+          <div className="print-artifact mx-auto max-w-3xl space-y-6 border rule bg-white p-8 text-sm">
             <div className="flex justify-between border-b rule pb-3">
               <div>
                 <div className="text-lg font-semibold">{world.state.persona.name}</div>

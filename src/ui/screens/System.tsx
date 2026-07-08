@@ -82,10 +82,10 @@ export default function System() {
       </div>
 
       <p className="max-w-3xl text-sm text-greyx">
-        The generator ran once at seed time; twelve months of journal events per persona are
-        persisted in Postgres and served by the API below. The browser queries — it generates
-        nothing. If the API is unreachable this page says so, and the same deterministic engine
-        runs locally instead: identical numbers either way.
+        Twelve months of journal events per workspace are persisted in Postgres and served by
+        the API below — the browser queries, it generates nothing. If the API is unreachable
+        this page says so, and the same deterministic engine runs locally instead: identical
+        numbers either way.
       </p>
 
       <div className="grid grid-cols-2 gap-6">

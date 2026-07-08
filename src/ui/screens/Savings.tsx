@@ -54,7 +54,7 @@ export default function Savings() {
             )
           })}
           <span className="ml-auto text-xs text-greyx">
-            always-on · re-scans on every clock tick · success fee only when it lands
+            always-on · re-scans continuously · success fee only when it lands
           </span>
         </div>
       </Card>
