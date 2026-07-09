@@ -162,9 +162,12 @@ body {
    tiers carry the hierarchy), ONE red accent per slide at most. Hairlines
    are white at ~16% (the `rule` class picks this up inside the deck). */
 .deck {
+  /* FULL-WHITE typography: every text tier is pure white — hierarchy comes
+     from size and weight only. Hairlines stay translucent (they are rules,
+     not type). */
   --ink: #ffffff; /* display / strong text */
-  --body: rgba(255, 255, 255, 0.96); /* body text — near-white */
-  --stone: rgba(255, 255, 255, 0.68); /* muted / secondary */
+  --body: #ffffff; /* body text */
+  --stone: #ffffff; /* secondary text — white too, differentiated by size/weight */
   --accent: #c1272d; /* the single red accent (placeholder — match template red) */
   --hairline: rgba(255, 255, 255, 0.22);
   background: #0f2440; /* blue navy (placeholder — match template navy) */
