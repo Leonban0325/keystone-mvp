@@ -69,3 +69,14 @@ Eurostat CP041 actuals + scenario table with caveat · statutory regime table (a
 5. Appendix "The math": A business-model derivation at ECB 2.25%, B Laurent ROI math,
    C financials derivation (units × revenue/unit; Y5 balances), D Eurostat detail.
 6. Punctuation: em/en dashes minimised in display copy; ranges as "to"; middot separators.
+
+## Design system (applied on top)
+INTRO display (licensed, public/fonts/Intro-Black-Alt.otf, runtime-checked — never falls back
+silently) + Poppins 300/400/500/600 (licensed TTFs, self-hosted). Navy field #14202B
+[placeholder], beige display #F6F2E9, body #E8E2D4, muted #9B8F7E, red accent #C1272D
+[placeholder], beige hairlines at 18%. One dominant UPPERCASE INTRO statement per slide
+(≥120pt, flush left); top strip "· Keystone + section · slide number" on every slide; ONE red
+accent per slide max (title contact box · problem stat underline · value-prop destination ·
+Keystone-beside-the-flow · collar Keystone segment · GTM "First" · moat line · none on team ·
+EBITDA margin line · status done-marks · use-of-funds lead segment). Charts beige + red on
+navy, no white backgrounds.
