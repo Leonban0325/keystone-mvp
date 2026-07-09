@@ -28,7 +28,7 @@ export default function Savings() {
   const leaderboard = isPm ? savingsByOwner(world.state.persona, opportunities).slice(0, 8) : []
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <h1 className="text-xl font-semibold tracking-tight">Savings Engine</h1>
 
       {/* §5 engine-status panel — the pitch centrepiece */}
@@ -54,7 +54,7 @@ export default function Savings() {
             )
           })}
           <span className="ml-auto text-xs text-greyx">
-            always-on · re-scans on every clock tick · success fee only when it lands
+            always-on · re-scans continuously · success fee only when it lands
           </span>
         </div>
       </Card>
@@ -77,7 +77,6 @@ export default function Savings() {
               <th className="py-1 font-medium">Opportunity</th>
               <th className="py-1 font-medium">Logic trail</th>
               <th className="py-1 text-right font-medium">Expected</th>
-              <th className="py-1 text-right font-medium">Confidence</th>
               <th className="py-1 text-right font-medium"></th>
             </tr>
           </thead>
@@ -86,13 +85,13 @@ export default function Savings() {
               <tr key={o.id} className="border-t rule align-top">
                 <td className="max-w-64 py-2 pr-3">
                   <div className="font-medium">{o.label}</div>
-                  <div className="mt-0.5">
+                  <div className="mt-1">
                     <Badge tone="grey">{DETECTOR_LABEL[o.detector]}</Badge>
                   </div>
                 </td>
                 <td className="max-w-72 py-2 pr-3 text-xs text-greyx">
                   “{o.logicTrail}”
-                  <div className="mt-1 text-[11px] uppercase tracking-[0.08em] text-brass">
+                  <div className="mt-1 text-[11px] uppercase tracking-[0.14em] text-brass">
                     {o.programRef}
                   </div>
                 </td>
@@ -102,11 +101,6 @@ export default function Savings() {
                     {o.kind === 'recurring' ? '/yr' : ' one-off'}
                   </span>
                   <div className="text-xs text-greyx">fee {eur(o.successFeeCents)}</div>
-                </td>
-                <td className="py-2 text-right">
-                  <Badge tone={o.confidence > 0.85 ? 'green' : 'brass'}>
-                    {(o.confidence * 100).toFixed(0)}%
-                  </Badge>
                 </td>
                 <td className="py-2 text-right">
                   {o.executed ? (
@@ -192,10 +186,10 @@ export default function Savings() {
             <tbody>
               {leaderboard.map((row, i) => (
                 <tr key={row.entityId} className="border-t rule first:border-t-0">
-                  <td className="py-1.5 text-greyx">{i + 1}</td>
-                  <td className="py-1.5">{row.name}</td>
-                  <td className="py-1.5 text-right">{eurCompact(row.identifiedCents)} identified</td>
-                  <td className="py-1.5 text-right text-[#3D6B47]">
+                  <td className="py-2 text-greyx">{i + 1}</td>
+                  <td className="py-2">{row.name}</td>
+                  <td className="py-2 text-right">{eurCompact(row.identifiedCents)} identified</td>
+                  <td className="py-2 text-right text-[#3D6B47]">
                     {eurCompact(row.executedCents)} captured
                   </td>
                 </tr>
@@ -214,7 +208,7 @@ function StatusCell(props: { value: string; label: string; tone?: string }) {
       <div className="text-xl font-semibold" style={props.tone ? { color: props.tone } : undefined}>
         {props.value}
       </div>
-      <div className="mt-0.5 text-[10px] uppercase tracking-[0.08em] text-greyx">{props.label}</div>
+      <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-greyx">{props.label}</div>
     </div>
   )
 }
@@ -233,7 +227,7 @@ function Bridge(props: { before: number; savings: number; oneOff: number }) {
     <div className="space-y-2">
       {rows.map((r) => (
         <div key={r.label}>
-          <div className="mb-0.5 flex justify-between text-xs">
+          <div className="mb-1 flex justify-between text-xs">
             <span className="text-greyx">{r.label}</span>
             <span>{eurCompact(r.value)}</span>
           </div>

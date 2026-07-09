@@ -24,7 +24,7 @@ export default function Compliance() {
   const record = complianceTrackRecord(world)
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex items-baseline justify-between">
         <h1 className="text-xl font-semibold tracking-tight">Deposits & Compliance</h1>
         {record.resolved > 0 && (
@@ -115,15 +115,15 @@ function FindingRow(props: { finding: Finding }) {
   return (
     <div className="flex items-start justify-between gap-4 py-3">
       <div className="flex items-start gap-3">
-        <span className="mt-1.5">
+        <span className="mt-2">
           <SeverityDot severity={finding.severity} />
         </span>
         <div>
           <div className="text-sm font-medium">
             {finding.ruleId} · {leaseLabel(world, finding.leaseId)}
           </div>
-          <div className="mt-0.5 text-sm text-greyx">{finding.message}</div>
-          <div className="mt-1 text-[11px] uppercase tracking-[0.08em] text-brass">
+          <div className="mt-1 text-sm text-greyx">{finding.message}</div>
+          <div className="mt-1 text-[11px] uppercase tracking-[0.14em] text-brass">
             {finding.legalRef}
           </div>
         </div>

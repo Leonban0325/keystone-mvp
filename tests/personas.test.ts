@@ -37,10 +37,11 @@ describe('persona catalog', () => {
     expect(result.leases).toBe(2)
     expect(world.journal.all.length).toBe(before + 2)
     expect(world.state.persona.entities.some((e) => e.name === 'Cabinet Morel')).toBe(true)
-    // survives snapshot round-trip
+    // survives snapshot round-trip (base 850 + re-lets/turnover + 2 imported)
     const revived = new DemoWorld(buildPersona('b1-haussmann'), world.snapshot())
     expect(revived.state.persona.entities.some((e) => e.name === 'Cabinet Morel')).toBe(true)
-    expect(revived.state.leases.length).toBe(853) // 850 + re-let + 2 imported
+    expect(revived.state.leases.length).toBe(world.state.leases.length)
+    expect(world.state.leases.length).toBeGreaterThanOrEqual(853)
   })
 
   it('A3: DE ruleset evaluates — tenant interest accrues, lump-sum demand flagged', () => {

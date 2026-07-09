@@ -3,9 +3,9 @@
  *
  * The partner bank is a SINGLE config field — every rails view reads it from
  * here, no bank name is hard-coded anywhere else. Set per engagement before
- * presenting. Rail providers are named by CATEGORY (accurate, shows
- * homework); nothing in the UI implies a signed integration that does not
- * exist — the "Simulated rails" badge stays on every money-movement screen.
+ * presenting. Rail providers are named by CATEGORY. The prototype boundary
+ * is disclosed once, honestly, via "About this prototype" (Addendum G §1) —
+ * never stamped on working screens.
  */
 export const PARTNER_BANK = {
   name: 'Deutsche Bank AG',

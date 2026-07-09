@@ -1,6 +1,7 @@
 import Shell from './ui/Shell'
 import Landing from './ui/landing/Landing'
 import Access from './ui/landing/Access'
+import Pitch from './ui/landing/Pitch'
 import { useApp } from './ui/store'
 
 /**
@@ -16,6 +17,13 @@ export default function App() {
     return (
       <Landing section="access">
         <Access />
+      </Landing>
+    )
+  }
+  if (route === 'pitch') {
+    return (
+      <Landing section="pitch">
+        <Pitch />
       </Landing>
     )
   }

@@ -1,14 +1,33 @@
 import { Component, ReactNode, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Severity } from '../engine/compliance/types'
 
+/**
+ * §1.4 the one section-label treatment: 11px small caps, 0.14em tracking,
+ * grey. Every uppercase label in the app is this component (or Badge).
+ */
+export function SectionHeader(props: { children: ReactNode; className?: string }) {
+  return (
+    <h3
+      className={`text-[11px] font-semibold uppercase tracking-[0.14em] text-greyx ${props.className ?? ''}`}
+    >
+      {props.children}
+    </h3>
+  )
+}
+
+/** §1.5 the one disclosure affordance — same glyph, same width, everywhere. */
+export function Chevron(props: { open: boolean }) {
+  return (
+    <span className="inline-block w-3 text-greyx" aria-hidden>
+      {props.open ? '▾' : '▸'}
+    </span>
+  )
+}
+
 export function Card(props: { title?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`border rule bg-white/40 p-5 ${props.className ?? ''}`}>
-      {props.title && (
-        <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-greyx">
-          {props.title}
-        </h3>
-      )}
+    <section className={`border rule bg-white/40 p-4 ${props.className ?? ''}`}>
+      {props.title && <SectionHeader className="mb-3">{props.title}</SectionHeader>}
       {props.children}
     </section>
   )
@@ -30,6 +49,26 @@ const SEVERITY_COLOR: Record<Severity, string> = {
   info: '#6E7680',
 }
 
+export type StatusTone = 'green' | 'amber' | 'red' | 'grey'
+
+export const STATUS_COLOR: Record<StatusTone, string> = {
+  green: '#3D6B47',
+  amber: '#B98A2F',
+  red: '#B4392E',
+  grey: '#6E7680',
+}
+
+/** §1.5 the one status indicator — an 8px dot, four tones, everywhere. */
+export function StatusDot(props: { tone: StatusTone; title?: string }) {
+  return (
+    <span
+      className="inline-block h-2 w-2 rounded-full"
+      style={{ background: STATUS_COLOR[props.tone] }}
+      title={props.title}
+    />
+  )
+}
+
 export function SeverityDot(props: { severity: Severity }) {
   return (
     <span
@@ -49,32 +88,57 @@ export function Badge(props: { children: ReactNode; tone?: 'ink' | 'brass' | 'gr
     green: 'border-[#3D6B47] text-[#3D6B47]',
   }
   return (
-    <span className={`border px-1.5 py-0.5 text-[10px] uppercase tracking-[0.1em] ${tones[props.tone ?? 'grey']}`}>
+    <span className={`whitespace-nowrap border px-2 py-1 text-[10px] uppercase tracking-[0.1em] ${tones[props.tone ?? 'grey']}`}>
       {props.children}
     </span>
   )
 }
 
+/**
+ * §1.2 the one button. Two tones, two fixed sizes, an optional fixed width —
+ * and it never wraps: a button that breaks to two lines reads as broken.
+ */
 export function Button(props: {
   children: ReactNode
   onClick?: () => void
   tone?: 'primary' | 'quiet'
+  size?: 'sm' | 'md'
   disabled?: boolean
   title?: string
+  className?: string
 }) {
   const styles =
     props.tone === 'primary'
       ? 'bg-ink text-paper hover:bg-ink/90'
       : 'border rule text-ink hover:border-ink'
+  const sizing = props.size === 'sm' ? 'px-2 py-1 text-xs' : 'px-3 py-2 text-sm'
   return (
     <button
-      className={`px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${styles}`}
+      className={`whitespace-nowrap ${sizing} disabled:cursor-not-allowed disabled:opacity-40 ${styles} ${props.className ?? ''}`}
       onClick={props.onClick}
       disabled={props.disabled}
       title={props.title}
     >
       {props.children}
     </button>
+  )
+}
+
+/**
+ * §2.2 the trust mark — a small brass label over a thin brass underline, one
+ * line always. No box: a bordered chip that wraps reads as broken, and a
+ * broken trust mark undermines trust.
+ */
+export function TrustMark(props: { children: ReactNode; title?: string }) {
+  return (
+    <span
+      className={`whitespace-nowrap border-b border-brass pb-px text-[10px] font-semibold uppercase tracking-[0.14em] text-brass ${
+        props.title ? 'cursor-help' : ''
+      }`}
+      title={props.title}
+    >
+      {props.children}
+    </span>
   )
 }
 
@@ -131,7 +195,7 @@ export function ConfirmDialog(props: {
       aria-modal="true"
       aria-label={props.title}
     >
-      <div className="w-full max-w-md border rule bg-paper p-5" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-md border rule bg-paper p-4" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-sm font-semibold">{props.title}</h3>
         <div className="mt-2 text-sm text-greyx">{props.body}</div>
         <div className="mt-4 flex justify-end gap-2">
@@ -247,6 +311,47 @@ export class ViewErrorBoundary extends Component<
     }
     return this.props.children
   }
+}
+
+
+/**
+ * G §1: the single honest disclosure — plainly states what is real and what
+ * is represented. One click away, never stamped on a working screen.
+ */
+export function AboutPrototypeDialog(props: { onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-ink/25"
+      onClick={props.onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="About this prototype"
+    >
+      <div className="w-full max-w-lg border rule bg-paper p-6" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-semibold uppercase tracking-[0.14em]">About this prototype</h3>
+        <div className="mt-3 space-y-3 text-sm leading-relaxed text-greyx">
+          <p>
+            Keystone is a functioning prototype. The compliance engine, the double-entry ledger
+            and the application logic are real: every figure folds from an append-only journal,
+            every finding traces to a versioned statutory rule, and every action posts real
+            accounting entries.
+          </p>
+          <p>
+            Banking, payment, card and identity rails are{' '}
+            <span className="text-ink">represented, not connected to live third-party
+            services</span>. Money movement, settlement timing and verification results are
+            produced by deterministic models over a curated twelve-month dataset — no live bank,
+            scheme or identity provider is called.
+          </p>
+        </div>
+        <div className="mt-4 text-right">
+          <Button tone="quiet" onClick={props.onClose}>
+            Close
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 /** Compliance status ring: green = clean leases, amber = warnings, red = violations. */

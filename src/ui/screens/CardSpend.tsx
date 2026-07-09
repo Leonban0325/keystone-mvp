@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useApp } from '../store'
 import { eur, eurCompact } from '../format'
-import { Badge, Button, Card } from '../components'
+import { Badge, Button, Card, Chevron } from '../components'
 import { SpendDonut, TrendLine, CHART_COLORS } from '../charts'
 import { spendByCategory, spendByProperty, spendOutliers, spendTrend } from '../../engine/analytics'
 
@@ -41,7 +41,7 @@ export default function CardSpend() {
   }, [world, rev, propertyFilter, categoryFilter])
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex items-baseline justify-between">
         <h1 className="text-xl font-semibold tracking-tight">Card & Spend</h1>
         <div className="text-sm text-greyx">
@@ -49,7 +49,7 @@ export default function CardSpend() {
         </div>
       </div>
 
-      <div className="grid grid-cols-6 gap-5">
+      <div className="grid grid-cols-6 gap-4">
         <Card title="Spend by category" className="col-span-2">
           <SpendDonut data={byCategory} />
           <table className="mt-2 w-full text-xs">
@@ -73,7 +73,7 @@ export default function CardSpend() {
         </Card>
 
         <Card title="Spend by property — top 10" className="col-span-2">
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {byProperty.map((p) => (
               <button
                 key={p.propertyId}
@@ -83,7 +83,7 @@ export default function CardSpend() {
                   setListOpen(true)
                 }}
               >
-                <div className="mb-0.5 flex justify-between">
+                <div className="mb-1 flex justify-between">
                   <span className="max-w-52 truncate">{p.label}</span>
                   <span>{eurCompact(p.amountCents)}</span>
                 </div>
@@ -105,24 +105,23 @@ export default function CardSpend() {
         <Card title="Outlier flags → savings engine" className="col-span-3">
           {outliers.length === 0 && (
             <div className="text-sm text-greyx">
-              No property is spending &gt;2× its trailing mean. Advance the clock to accrue more
-              months of history.
+              No property is spending &gt;2× its trailing mean this month.
             </div>
           )}
           <table className="w-full text-sm">
             <tbody>
               {outliers.map((o) => (
                 <tr key={o.propertyId} className="border-t rule first:border-t-0">
-                  <td className="max-w-56 truncate py-1.5 font-medium">{o.label}</td>
-                  <td className="py-1.5 capitalize text-greyx">{o.category}</td>
-                  <td className="py-1.5 text-right">
+                  <td className="max-w-56 truncate py-2 font-medium">{o.label}</td>
+                  <td className="py-2 capitalize text-greyx">{o.category}</td>
+                  <td className="py-2 text-right">
                     {eur(o.lastMonthCents)}{' '}
                     <span className="text-xs text-greyx">vs {eur(o.trailingMeanCents)} avg</span>
                   </td>
-                  <td className="py-1.5 text-right">
+                  <td className="py-2 text-right">
                     <Badge tone="red">{o.ratio.toFixed(1)}×</Badge>
                   </td>
-                  <td className="py-1.5 text-right">
+                  <td className="py-2 text-right">
                     <Button tone="quiet" onClick={() => setScreen('savings')}>
                       renegotiate →
                     </Button>
@@ -176,7 +175,7 @@ export default function CardSpend() {
       <Card
         title={
           <button onClick={() => setListOpen(!listOpen)} className="uppercase tracking-[0.14em]">
-            Transactions — drill-down {listOpen ? '▾' : '▸'}
+            Transactions — drill-down <Chevron open={listOpen} />
           </button>
         }
       >
@@ -215,13 +214,13 @@ export default function CardSpend() {
                   const [merchant, propertyLabel] = (event.memo ?? '').split(' — ')
                   return (
                     <tr key={event.id} className="border-t rule">
-                      <td className="py-1.5 text-greyx">{event.date}</td>
-                      <td className="py-1.5 font-medium">{merchant}</td>
-                      <td className="max-w-56 truncate py-1.5">{propertyLabel}</td>
-                      <td className="py-1.5">
+                      <td className="py-2 text-greyx">{event.date}</td>
+                      <td className="py-2 font-medium">{merchant}</td>
+                      <td className="max-w-56 truncate py-2">{propertyLabel}</td>
+                      <td className="py-2">
                         <Badge tone="grey">{posting.dims.category?.replace('card:', '')}</Badge>
                       </td>
-                      <td className="py-1.5 text-right">{eur(posting.amountCents)}</td>
+                      <td className="py-2 text-right">{eur(posting.amountCents)}</td>
                     </tr>
                   )
                 })}

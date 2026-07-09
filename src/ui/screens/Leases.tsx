@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useApp } from '../store'
 import { eur, eurCompact, formatDate } from '../format'
-import { Badge, Button, Card } from '../components'
+import { Badge, Button, Card, Chevron, StatusDot, StatusTone } from '../components'
 import { SeedLease } from '../../engine/seed/types'
 import { Jurisdiction } from '../../engine/ledger/types'
 import { calculateRevision } from '../../engine/indexation/calculator'
 import { upcomingLeaseEvents, rentSparkline } from '../../engine/analytics'
 import { extractLease, ExtractionResult } from '../../ai/extract'
-import PropertyMap, { ComplianceTone } from '../PropertyMap'
 import { Sparkline } from '../charts'
+import { countryOf, regionOf } from '../regions'
+import { Property } from '../../engine/seed/types'
+import { Finding } from '../../engine/compliance/types'
+import VerificationPanel from '../VerificationPanel'
 import sampleLease from '../../fixtures/sample-lease.txt?raw'
 
 export default function Leases() {
@@ -17,7 +20,6 @@ export default function Leases() {
   const [selected, setSelected] = useState<string | null>(null)
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null)
   const [wizardOpen, setWizardOpen] = useState(false)
-  const [view, setView] = useState<'list' | 'map'>('list')
 
   // Cmd-K deep link: property → its detail card.
   useEffect(() => {
@@ -27,131 +29,327 @@ export default function Leases() {
   }, [])
 
   const findings = world.findings()
-  const statusByProperty = useMemo(() => {
-    const map = new Map<string, ComplianceTone>()
-    for (const finding of findings) {
-      if (finding.severity === 'info') continue
-      const lease = world.state.leases.find((l) => l.id === finding.leaseId)
-      if (!lease) continue
-      const current = map.get(lease.propertyId)
-      if (finding.severity === 'violation') map.set(lease.propertyId, 'red')
-      else if (current !== 'red') map.set(lease.propertyId, 'amber')
-    }
-    return map
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [findings, world])
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold tracking-tight">Properties & Leases</h1>
-        <div className="flex gap-2">
-          <Button tone="quiet" onClick={() => setView(view === 'list' ? 'map' : 'list')}>
-            {view === 'list' ? 'Map view' : 'List view'}
-          </Button>
-          <Button tone="primary" onClick={() => setWizardOpen(!wizardOpen)}>
-            {wizardOpen ? 'Close wizard' : 'New lease'}
-          </Button>
-        </div>
+        <Button tone="primary" onClick={() => setWizardOpen(!wizardOpen)}>
+          {wizardOpen ? 'Close wizard' : 'New lease'}
+        </Button>
       </div>
 
       {wizardOpen && <NewLeaseWizard onDone={() => setWizardOpen(false)} />}
 
-      {view === 'map' && (
-        <Card title="Portfolio map — pins colored by compliance">
-          <PropertyMap
-            statusByProperty={statusByProperty}
-            selected={selectedProperty}
-            onSelect={setSelectedProperty}
-          />
-        </Card>
-      )}
+      <EntityVerification />
 
-      {selectedProperty && (
-        <PropertyCard propertyId={selectedProperty} onClose={() => setSelectedProperty(null)} />
-      )}
-
-      {view === 'list' && (
-      <Card>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-[11px] uppercase tracking-[0.1em] text-greyx">
-              <th className="py-1 font-medium">Property</th>
-              <th className="py-1 font-medium">Regime</th>
-              <th className="py-1 font-medium">Tenant(s)</th>
-              <th className="py-1 text-right font-medium">Rent</th>
-              <th className="py-1 text-right font-medium">Deposit held</th>
-              <th className="py-1 text-right font-medium">6-mo rent</th>
-              <th className="py-1 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {world.state.leases.slice(0, 120).map((lease) => {
-              const property = world.state.persona.properties.find(
-                (p) => p.id === lease.propertyId,
-              )
-              const leaseFindings = findings.filter((f) => f.leaseId === lease.id)
-              const dunning = world.dunningStage(lease.id)
-              return (
-                <tr
-                  key={lease.id}
-                  className={`cursor-pointer border-t rule hover:bg-white/50 ${selected === lease.id ? 'bg-white/70' : ''}`}
-                  onClick={() => setSelected(selected === lease.id ? null : lease.id)}
-                >
-                  <td className="py-2 font-medium">{property?.label ?? lease.propertyId}</td>
-                  <td className="py-2">
-                    <Badge tone="ink">{lease.jurisdiction}</Badge>{' '}
-                    <span className="text-xs text-greyx">
-                      {lease.furnished ? 'furnished' : 'unfurnished'}
-                    </span>
-                  </td>
-                  <td className="py-2">{lease.tenantNames.join(', ')}</td>
-                  <td className="py-2 text-right">{eur(lease.monthlyRentCents)}</td>
-                  <td className="py-2 text-right">
-                    {eur(world.journal.balance(`liabilities:deposits_held:${lease.id}`))}
-                  </td>
-                  <td className="py-2 text-right">
-                    <Sparkline values={rentSparkline(world, { leaseId: lease.id })} />
-                  </td>
-                  <td className="py-2">
-                    <span className="flex flex-wrap gap-1">
-                      {lease.moveOutDate && <Badge tone="brass">moving out</Badge>}
-                      {leaseFindings.some((f) => f.severity === 'violation') && (
-                        <Badge tone="red">violation</Badge>
-                      )}
-                      {leaseFindings.some((f) => f.severity === 'warning') && (
-                        <Badge tone="brass">warning</Badge>
-                      )}
-                      {dunning !== 'current' && <Badge tone="red">{dunning.replace(/_/g, ' ')}</Badge>}
-                      {lease.coTenants && <Badge tone="grey">flat-share</Badge>}
-                      {calculateRevision(lease) && <Badge tone="grey">indexation</Badge>}
-                    </span>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-        {world.state.leases.length > 120 && (
-          <div className="mt-2 text-xs text-greyx">
-            Showing 120 of {world.state.leases.length} — use ⌘K search or the map to jump.
-          </div>
-        )}
-      </Card>
-      )}
-
-      {selected && <LeaseDetail leaseId={selected} />}
+      <RegionalList
+        findings={findings}
+        selectedProperty={selectedProperty}
+        onSelectProperty={setSelectedProperty}
+        selectedLease={selected}
+        onSelectLease={setSelected}
+      />
     </div>
   )
 }
 
-/** §7 property detail card — from pin or search hit. */
-function PropertyCard(props: { propertyId: string; onClose: () => void }) {
+/** G §5: KYB on the owning entity — verification earned, shown on the profile. */
+function EntityVerification() {
+  const { world } = useApp()
+  const entity = world.state.persona.entities[0]
+  if (!entity) return null
+  const record = world.verification(entity.id)
+  const [open, setOpen] = useState(false)
+  const kind = entity.kind === 'individual' ? 'individual' : 'company'
+  return (
+    <Card>
+      <button
+        className="flex w-full items-center justify-between text-left"
+        onClick={() => setOpen(!open)}
+      >
+        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-greyx">
+          Entity profile — {entity.name}
+        </span>
+        <span className="flex items-center gap-2 text-xs">
+          {record?.status === 'verified' ? (
+            <Badge tone="green">Verified</Badge>
+          ) : record ? (
+            <Badge tone="brass">Verification in progress</Badge>
+          ) : (
+            <Badge tone="grey">Not verified</Badge>
+          )}
+          <Chevron open={open} />
+        </span>
+      </button>
+      {open && (
+        <div className="mt-3 border-t rule pt-3">
+          <VerificationPanel partyId={entity.id} name={entity.name} kind={kind} />
+        </div>
+      )}
+    </Card>
+  )
+}
+
+const ROW_CAP = 30
+
+/**
+ * G §2 + J §2.3: the grouping IS the view — country → region → city, each
+ * group a clean section with a summary line and a compliance status dot
+ * (the tones the old map pins carried, now legible). A property's detail
+ * expands INLINE directly below its own row — never at the bottom of the
+ * page. Collapsed regions render nothing and long regions cap at 30 rows,
+ * so hundreds of units stay fast.
+ */
+function RegionalList(props: {
+  findings: Finding[]
+  selectedProperty: string | null
+  onSelectProperty: (id: string | null) => void
+  selectedLease: string | null
+  onSelectLease: (id: string | null) => void
+}) {
+  const { world } = useApp()
+  const [openRegions, setOpenRegions] = useState<Set<string> | null>(null)
+  const [showAll, setShowAll] = useState<Set<string>>(new Set())
+
+  const countries = useMemo(() => {
+    const byCountry = new Map<string, Map<string, Property[]>>()
+    for (const property of world.state.persona.properties) {
+      const country = countryOf(property.jurisdiction)
+      const region = regionOf(property.city, property.jurisdiction)
+      const regions = byCountry.get(country) ?? new Map<string, Property[]>()
+      regions.set(region, [...(regions.get(region) ?? []), property])
+      byCountry.set(country, regions)
+    }
+    return [...byCountry.entries()]
+      .map(([name, regions]) => ({
+        name,
+        regions: [...regions.entries()].sort((a, b) => b[1].length - a[1].length),
+        units: [...regions.values()].reduce((s, list) => s + list.length, 0),
+      }))
+      .sort((a, b) => b.units - a.units)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [world])
+
+  const allRegions = countries.flatMap((c) => c.regions)
+
+  // Small portfolios open everything; large ones open the biggest region.
+  const open =
+    openRegions ??
+    new Set(
+      (world.state.persona.properties.length <= 60 ? allRegions : allRegions.slice(0, 1)).map(
+        ([name]) => name,
+      ),
+    )
+
+  // Cmd-K deep link: make sure the focused property's region is open.
+  useEffect(() => {
+    if (!props.selectedProperty) return
+    const property = world.state.persona.properties.find((p) => p.id === props.selectedProperty)
+    if (!property) return
+    const region = regionOf(property.city, property.jurisdiction)
+    if (!open.has(region)) setOpenRegions(new Set([...open, region]))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.selectedProperty])
+
+  const toggleRegion = (name: string) => {
+    const next = new Set(open)
+    if (next.has(name)) next.delete(name)
+    else next.add(name)
+    setOpenRegions(next)
+  }
+
+  const summarize = (properties: Property[]) => {
+    const leases = world.state.leases.filter((l) => properties.some((p) => p.id === l.propertyId))
+    const active = leases.filter(
+      (l) => l.startDate <= world.today && (!l.moveOutDate || l.moveOutDate > world.today),
+    )
+    const deposits = active.reduce(
+      (s, l) => s + world.journal.balance(`liabilities:deposits_held:${l.id}`),
+      0,
+    )
+    const regionFindings = props.findings.filter(
+      (f) => f.severity !== 'info' && leases.some((l) => l.id === f.leaseId),
+    )
+    const tone: StatusTone = regionFindings.some((f) => f.severity === 'violation')
+      ? 'red'
+      : regionFindings.length > 0
+        ? 'amber'
+        : 'green'
+    return { active, deposits, openFindings: regionFindings.length, tone }
+  }
+
+  return (
+    <Card>
+      {countries.map((country) => {
+        const countrySummary = summarize(country.regions.flatMap(([, list]) => list))
+        return (
+          <div key={country.name} className="border-b rule py-2 last:border-b-0">
+            <div className="flex items-baseline justify-between gap-4 py-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-greyx">
+                {country.name}
+              </span>
+              <span className="flex items-baseline gap-2 text-xs tabular-nums text-greyx">
+                {country.units} unit{country.units === 1 ? '' : 's'} ·{' '}
+                {countrySummary.openFindings === 0
+                  ? 'clean'
+                  : `${countrySummary.openFindings} open finding${countrySummary.openFindings === 1 ? '' : 's'}`}{' '}
+                <StatusDot tone={countrySummary.tone} />
+              </span>
+            </div>
+            {country.regions.map(([name, properties]) => {
+              const { active, deposits, openFindings, tone } = summarize(properties)
+              const isOpen = open.has(name)
+              const visible = showAll.has(name) ? properties : properties.slice(0, ROW_CAP)
+              return (
+                <div key={name} className="border-t rule">
+                  <button
+                    className="flex w-full items-baseline justify-between gap-4 py-3 text-left hover:bg-white/40"
+                    onClick={() => toggleRegion(name)}
+                  >
+                    <span className="text-sm font-semibold">
+                      <span className="mr-2">
+                        <Chevron open={isOpen} />
+                      </span>
+                      {name}
+                    </span>
+                    <span className="flex items-baseline gap-2 text-xs tabular-nums text-greyx">
+                      <span>
+                        {properties.length} unit{properties.length === 1 ? '' : 's'} ·{' '}
+                        {properties.length
+                          ? Math.round((active.length / properties.length) * 100)
+                          : 0}
+                        % occupied · {eurCompact(deposits)} held ·{' '}
+                        {openFindings === 0
+                          ? 'clean'
+                          : `${openFindings} open finding${openFindings === 1 ? '' : 's'}`}
+                      </span>
+                      <StatusDot tone={tone} />
+                    </span>
+                  </button>
+                  {isOpen && (
+                    <div className="pb-2 pl-4">
+                      <table className="w-full text-sm">
+                        <tbody>
+                          {visible.map((property) => (
+                            <PropertyRow
+                              key={property.id}
+                              property={property}
+                              findings={props.findings}
+                              expanded={props.selectedProperty === property.id}
+                              onToggle={() =>
+                                props.onSelectProperty(
+                                  props.selectedProperty === property.id ? null : property.id,
+                                )
+                              }
+                              selectedLease={props.selectedLease}
+                              onSelectLease={props.onSelectLease}
+                            />
+                          ))}
+                        </tbody>
+                      </table>
+                      {properties.length > visible.length && (
+                        <button
+                          className="mt-1 text-xs text-brass hover:underline"
+                          onClick={() => setShowAll(new Set([...showAll, name]))}
+                        >
+                          Show all {properties.length} in {name}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )
+      })}
+    </Card>
+  )
+}
+
+function PropertyRow(props: {
+  property: Property
+  findings: Finding[]
+  expanded: boolean
+  onToggle: () => void
+  selectedLease: string | null
+  onSelectLease: (id: string | null) => void
+}) {
+  const { world } = useApp()
+  const { property } = props
+  const leases = world.state.leases.filter((l) => l.propertyId === property.id)
+  const active = leases.filter(
+    (l) => l.startDate <= world.today && (!l.moveOutDate || l.moveOutDate > world.today),
+  )
+  const lease = active[0] ?? leases[leases.length - 1]
+  const leaseFindings = props.findings.filter(
+    (f) => f.severity !== 'info' && leases.some((l) => l.id === f.leaseId),
+  )
+  const dunning = lease ? world.dunningStage(lease.id) : 'current'
+  return (
+    <>
+      <tr
+        className={`cursor-pointer border-t rule hover:bg-white/50 ${props.expanded ? 'bg-white/70' : ''}`}
+        onClick={props.onToggle}
+      >
+        <td className="py-2 font-medium">{property.label}</td>
+        <td className="py-2 text-greyx">{property.city}</td>
+        <td className="max-w-52 truncate py-2">
+          {active.length > 0 ? active.map((l) => l.tenantNames[0]).join(', ') : 'vacant'}
+        </td>
+        <td className="py-2 text-right tabular-nums">
+          {active[0] ? eur(active[0].monthlyRentCents) : '—'}
+        </td>
+        <td className="py-2 text-right">
+          {lease && <Sparkline values={rentSparkline(world, { leaseId: lease.id })} />}
+        </td>
+        <td className="py-2 text-right">
+          <span className="flex flex-wrap justify-end gap-1">
+            {active.length === 0 && <Badge tone="grey">vacant</Badge>}
+            {active[0]?.moveOutDate && (
+              <Badge tone="brass">moving out</Badge>
+            )}
+            {leaseFindings.some((f) => f.severity === 'violation') && (
+              <Badge tone="red">violation</Badge>
+            )}
+            {leaseFindings.some((f) => f.severity === 'warning') && (
+              <Badge tone="brass">warning</Badge>
+            )}
+            {dunning !== 'current' && <Badge tone="red">{dunning.replace(/_/g, ' ')}</Badge>}
+            {active[0]?.coTenants && <Badge tone="grey">flat-share</Badge>}
+            {active[0] && calculateRevision(active[0]) && <Badge tone="grey">indexation</Badge>}
+          </span>
+        </td>
+      </tr>
+      {props.expanded && (
+        <tr className="border-t rule bg-white/60">
+          <td colSpan={6} className="px-3 py-3">
+            <PropertyInlineDetail
+              propertyId={property.id}
+              selectedLease={props.selectedLease}
+              onSelectLease={props.onSelectLease}
+            />
+          </td>
+        </tr>
+      )}
+    </>
+  )
+}
+
+/** The §2 inline detail card — rendered directly below the property's own row. */
+function PropertyInlineDetail(props: {
+  propertyId: string
+  selectedLease: string | null
+  onSelectLease: (id: string | null) => void
+}) {
   const { world, setScreen, setFocus } = useApp()
   const property = world.state.persona.properties.find((p) => p.id === props.propertyId)
   if (!property) return null
   const leases = world.state.leases.filter((l) => l.propertyId === props.propertyId)
-  const active = leases.filter((l) => !l.moveOutDate || l.moveOutDate > world.today)
+  const active = leases.filter(
+    (l) => l.startDate <= world.today && (!l.moveOutDate || l.moveOutDate > world.today),
+  )
   const deposits = leases.reduce(
     (s, l) => s + world.journal.balance(`liabilities:deposits_held:${l.id}`),
     0,
@@ -164,17 +362,14 @@ function PropertyCard(props: { propertyId: string; onClose: () => void }) {
     .filter((f) => leases.some((l) => l.id === f.leaseId) && f.severity !== 'info')
 
   return (
-    <Card title={`Property — ${property.label}, ${property.city}`}>
+    <div>
       <div className="grid grid-cols-4 gap-6 text-sm">
-        <div className="space-y-1.5">
+        <div className="space-y-2">
+          <PField label="Address" value={`${property.label}, ${property.city}`} />
           <PField label="Regime" value={property.jurisdiction} />
-          <PField label="Units / occupied" value={`${leases.length} / ${active.length}`} />
-          <PField
-            label="Occupancy"
-            value={leases.length ? `${Math.round((active.length / leases.length) * 100)}%` : '—'}
-          />
+          <PField label="Occupancy" value={active.length > 0 ? 'occupied' : 'vacant'} />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <PField label="Deposits held (segregated)" value={eurCompact(deposits)} />
           <PField
             label="Rent roll"
@@ -185,29 +380,63 @@ function PropertyCard(props: { propertyId: string; onClose: () => void }) {
             value={findings.length === 0 ? 'clean' : `${findings.length} open finding(s)`}
           />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <PField
             label="Next lease event"
-            value={nextEvent ? `${nextEvent.type} · ${formatDate(nextEvent.date)}` : 'none in 12 months'}
+            value={
+              nextEvent ? `${nextEvent.type} · ${formatDate(nextEvent.date)}` : 'none in 12 months'
+            }
           />
-          <PField label="Tenants" value={active.map((l) => l.tenantNames[0]).join(', ') || '—'} />
         </div>
-        <div className="flex flex-col items-end justify-between gap-2">
+        <div className="flex flex-col items-end gap-2">
           <Button
             tone="quiet"
             onClick={() => {
-              setFocus({ entityId: property.entityId })
+              setFocus({ leaseId: active[0]?.id ?? leases[0]?.id, propertyId: property.id })
               setScreen('money')
             }}
           >
-            Money roll-up →
+            Ledger →
           </Button>
-          <Button tone="quiet" onClick={props.onClose}>
-            Close
+          <Button
+            tone="quiet"
+            onClick={() => {
+              setFocus({ leaseId: active[0]?.id ?? leases[0]?.id })
+              setScreen('reports')
+            }}
+          >
+            Documents →
           </Button>
         </div>
       </div>
-    </Card>
+
+      <div className="mt-3 border-t rule pt-2">
+        {leases.map((l) => (
+          <div key={l.id}>
+            <button
+              className="flex w-full items-center justify-between py-1 text-left text-xs hover:bg-white/50"
+              onClick={() => props.onSelectLease(props.selectedLease === l.id ? null : l.id)}
+            >
+              <span>
+                {l.tenantNames.join(', ')}
+                <span className="ml-2 text-greyx">
+                  {formatDate(l.startDate)}
+                  {l.moveOutDate ? ` → ${formatDate(l.moveOutDate)}` : ' → current'}
+                </span>
+              </span>
+              <span className="tabular-nums text-greyx">
+                {eur(l.monthlyRentCents)}/mo <Chevron open={props.selectedLease === l.id} />
+              </span>
+            </button>
+            {props.selectedLease === l.id && (
+              <div className="mb-2">
+                <LeaseDetail leaseId={l.id} />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -231,7 +460,7 @@ function LeaseDetail(props: { leaseId: string }) {
   return (
     <Card title={`Lease detail — ${property?.label}`}>
       <div className="grid grid-cols-3 gap-6 text-sm">
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <Field label="Regime" value={`${lease.jurisdiction} · ${lease.furnished ? 'furnished' : 'unfurnished'}`} />
           <Field label="Start date" value={formatDate(lease.startDate)} />
           {lease.moveOutDate && <Field label="Move-out" value={formatDate(lease.moveOutDate)} />}
@@ -294,6 +523,15 @@ function LeaseDetail(props: { leaseId: string }) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* G §5: tenant identity — verified only by completing the flow. */}
+      <div className="mt-4 border-t rule pt-3">
+        <VerificationPanel
+          partyId={`${lease.id}:tenant`}
+          name={lease.tenantNames[0]}
+          kind="individual"
+        />
       </div>
     </Card>
   )
@@ -368,7 +606,7 @@ function NewLeaseWizard(props: { onDone: () => void }) {
             onChange={(e) => setText(e.target.value)}
           />
           <div className="flex gap-2">
-            <Button onClick={() => setText(sampleLease)}>Load sample lease</Button>
+            <Button onClick={() => setText(sampleLease)}>Load lease on file</Button>
             <Button tone="primary" onClick={runExtraction} disabled={!text || busy}>
               {busy ? 'Extracting…' : 'Extract fields'}
             </Button>

@@ -4,10 +4,11 @@ import { mulberry32, intBetween, pick } from '../seed/rng'
 import { PersonaSeed } from '../seed/types'
 
 /**
- * Savings engine v2 (Addendum B §5): five always-on detectors over the seed +
- * simulated feeds, scaled to the persona's portfolio. Every opportunity
- * carries expected €, a confidence score and a logic trail — this is what
- * turns "2 savings" into an optimisation engine.
+ * Savings engine (Addendum B §5, revised by H §1): five always-on detectors
+ * over the seed + curated feeds, scaled to the persona's portfolio. Every
+ * opportunity carries an expected € value and a logic trail, and the queue
+ * ranks by expected value — a simple, defensible ordering. No probability
+ * number is shipped that cannot be defended.
  */
 
 export type DetectorKind = 'property_tax' | 'utility' | 'vendor' | 'insurance' | 'subsidy'
@@ -29,7 +30,6 @@ export interface SavingsOpportunity {
   /** Annual savings for recurring, total for one-off. Cents. */
   savingsCents: number
   successFeeCents: number
-  confidence: number
   detail: string
   logicTrail: string
   programRef: string
@@ -47,8 +47,9 @@ export function assetValueImpactCents(opportunity: SavingsOpportunity): number {
 
 export function detectOpportunities(persona: PersonaSeed): SavingsOpportunity[] {
   // A1 keeps its fixture-driven numbers — the €379.20 appeal is the +€8,400 moment.
-  if (persona.id === 'a1-meridian') return detectA1(persona)
-  return detectScaled(persona)
+  const out = persona.id === 'a1-meridian' ? detectA1(persona) : detectScaled(persona)
+  // H §1: rank by expected € value, largest saving first.
+  return out.sort((a, b) => b.savingsCents - a.savingsCents)
 }
 
 // ── A1 · fixture-feed detectors (deck-reconciled) ────────────────────────────
@@ -71,7 +72,6 @@ function detectA1(persona: PersonaSeed): SavingsOpportunity[] {
       kind: 'recurring',
       savingsCents: savings,
       successFeeCents: Math.round(savings * RECURRING_FEE),
-      confidence: 0.88,
       detail: `Assessed €${a.assessedPerSqm.toFixed(2)}/m² vs city median €${median.toFixed(2)}/m²`,
       logicTrail: `valeur locative cadastrale €${a.assessedPerSqm.toFixed(2)}/m² vs €${median.toFixed(2)}/m² regional comparable (${a.sqm} m²) → appeal basis under CGI art. 1507`,
       programRef: 'CGI art. 1507 (réclamation)',
@@ -90,7 +90,6 @@ function detectA1(persona: PersonaSeed): SavingsOpportunity[] {
     kind: 'recurring',
     savingsCents: utilSavings,
     successFeeCents: Math.round(utilSavings * RECURRING_FEE),
-    confidence: 0.93,
     detail: `${tariffFeed.currentSupplier} → ${bestOffer.supplier}`,
     logicTrail: `tariff €${tariffFeed.currentRate}/kWh vs market €${bestOffer.rate}/kWh, same consumption band (~${tariffFeed.estimatedAnnualKwh} kWh/yr)`,
     programRef: 'Portfolio supply contract',
@@ -104,7 +103,6 @@ function detectA1(persona: PersonaSeed): SavingsOpportunity[] {
     kind: 'recurring',
     savingsCents: 18_500,
     successFeeCents: Math.round(18_500 * RECURRING_FEE),
-    confidence: 0.79,
     detail: 'OTIS contract 28% above regional benchmark',
     logicTrail: 'contract €660/yr vs anonymised benchmark €475/yr for same service/region (lift, 6 floors, Paris)',
     programRef: 'Vendor benchmark feed',
@@ -120,7 +118,6 @@ function detectA1(persona: PersonaSeed): SavingsOpportunity[] {
     kind: 'recurring',
     savingsCents: insSavings,
     successFeeCents: Math.round(insSavings * RECURRING_FEE),
-    confidence: 0.9,
     detail: `Current €${(ins.currentAnnualPremiumCents / 100).toFixed(0)}/yr → ${ins.bestQuoteInsurer}`,
     logicTrail: `premium €${(ins.currentAnnualPremiumCents / 100).toFixed(0)} vs requote €${(ins.bestQuoteAnnualPremiumCents / 100).toFixed(0)} at renewal, equal cover`,
     programRef: 'Assurance propriétaire non-occupant',
@@ -138,7 +135,6 @@ function detectA1(persona: PersonaSeed): SavingsOpportunity[] {
       kind: 'one_off',
       savingsCents: grant,
       successFeeCents: Math.round(grant * ONE_OFF_FEE),
-      confidence: 0.84,
       detail: `DPE class ${row.dpe} qualifies for the rénovation énergétique grant`,
       logicTrail: `EPC class ${row.dpe} + insulation work type → MaPrimeRénov' rule match (ANAH barème 2026)`,
       programRef: "MaPrimeRénov' (ANAH)",
@@ -190,7 +186,6 @@ function detectScaled(persona: PersonaSeed): SavingsOpportunity[] {
       kind: 'recurring',
       savingsCents: savings,
       successFeeCents: Math.round(savings * RECURRING_FEE),
-      confidence: 0.78 + rand() * 0.14,
       detail: `Assessment ${((assessed / median - 1) * 100).toFixed(0)}% above comparables`,
       logicTrail: `taxe foncière €${assessed}/m² vs €${median}/m² regional comparable → appeal basis`,
       programRef: property.jurisdiction === 'FR' ? 'CGI art. 1507' : 'IBI revisión catastral',
@@ -211,7 +206,6 @@ function detectScaled(persona: PersonaSeed): SavingsOpportunity[] {
       kind: 'recurring',
       savingsCents: savings,
       successFeeCents: Math.round(savings * RECURRING_FEE),
-      confidence: 0.86 + rand() * 0.08,
       detail: `${utilityCount} supply points, avg €${(perLease / 100).toFixed(0)}/yr each`,
       logicTrail: `tariff €0.252/kWh vs market €0.218/kWh, same consumption band, ${utilityCount} matches`,
       programRef: 'Tariff comparison feed',
@@ -230,7 +224,6 @@ function detectScaled(persona: PersonaSeed): SavingsOpportunity[] {
       kind: 'recurring',
       savingsCents: savings,
       successFeeCents: Math.round(savings * RECURRING_FEE),
-      confidence: 0.72 + rand() * 0.12,
       detail: 'Maintenance contract above regional benchmark',
       logicTrail: `€${current}/mo vs anonymised benchmark €${current - Math.round(savings / 1200)}/mo for same service/region (spend-outlier flag)`,
       programRef: 'Vendor benchmark feed',
@@ -251,7 +244,6 @@ function detectScaled(persona: PersonaSeed): SavingsOpportunity[] {
       kind: 'recurring',
       savingsCents: savings,
       successFeeCents: Math.round(savings * RECURRING_FEE),
-      confidence: 0.83 + rand() * 0.1,
       detail: `avg €${(perPolicy / 100).toFixed(0)}/yr per policy vs requote`,
       logicTrail: `premium €685 vs requote €${685 - Math.round(perPolicy / 100)} for equal cover, ${insuranceCount} renewals in window`,
       programRef: 'Broker requote feed',
@@ -270,7 +262,6 @@ function detectScaled(persona: PersonaSeed): SavingsOpportunity[] {
       kind: 'one_off',
       savingsCents: grant,
       successFeeCents: Math.round(grant * ONE_OFF_FEE),
-      confidence: 0.8 + rand() * 0.1,
       detail: 'EPC-eligible for energy-renovation subsidy',
       logicTrail: `EPC class ${dpe} + work type → MaPrimeRénov'/Ecobonus rule match`,
       programRef: "MaPrimeRénov' (ANAH)",

@@ -9,15 +9,20 @@ import type { Screen } from './store'
  */
 
 export const NAV_BY_ROLE: Record<Role, Screen[]> = {
-  owner: ['dashboard', 'leases', 'compliance', 'money', 'rails', 'card', 'savings', 'reports'],
-  property_manager: ['dashboard', 'rollup', 'leases', 'compliance', 'money', 'rails', 'card', 'savings', 'reports'],
-  institution: ['dashboard', 'lenderpack', 'leases', 'compliance', 'money', 'rails', 'card', 'reports'],
+  owner: ['dashboard', 'leases', 'compliance', 'money', 'card', 'savings', 'reports'],
+  property_manager: ['dashboard', 'rollup', 'leases', 'compliance', 'money', 'card', 'savings', 'reports'],
+  institution: ['dashboard', 'lenderpack', 'leases', 'compliance', 'money', 'card', 'reports'],
   partner: ['partner'],
 }
 
-/** Everything the role may open — nav plus non-nav screens like /system. */
+/**
+ * Everything the role may open — the nav plus contextual screens: payment
+ * processing (reached from a transaction, G §7) and the internal /system
+ * view.
+ */
 export function allowedScreens(role: Role, demoClean: boolean): Set<Screen> {
   const screens = new Set<Screen>(NAV_BY_ROLE[role])
+  if (role !== 'partner') screens.add('rails')
   if (!demoClean) screens.add('system')
   return screens
 }

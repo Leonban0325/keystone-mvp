@@ -1,7 +1,7 @@
 import { ReactNode } from 'react'
 import { useApp } from '../store'
 import { eur, eurCompact, formatDate, pct } from '../format'
-import { Badge, Card, CountUp, Stat, StatusRing } from '../components'
+import { Badge, Card, CountUp, Stat, StatusRing, TrustMark } from '../components'
 import { actionQueue } from '../notifications'
 import { PARTNER_BANK } from '../../config'
 import { CashFlowChart, NoiBridgeChart, TrendLine, CHART_COLORS } from '../charts'
@@ -35,7 +35,7 @@ export default function Dashboard() {
   const widgets = widgetsFor(world)
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex items-baseline justify-between">
         <h1 className="text-xl font-semibold tracking-tight">Portfolio</h1>
         <div className="text-sm text-greyx">
@@ -47,7 +47,7 @@ export default function Dashboard() {
       <ActionQueue />
 
       {/* Shared top row — §3 count-up on the hero figures. */}
-      <div className="grid grid-cols-4 gap-5">
+      <div className="grid grid-cols-4 gap-4">
         <Card>
           <Stat
             label="NOI (annualised)"
@@ -60,14 +60,16 @@ export default function Dashboard() {
             label="Balances"
             value={<CountUp value={d.balancesCents} format={eurCompact} />}
             sub={
-              <span className="flex items-center gap-2">
-                {eurCompact(d.depositsCashCents)} deposits · {eurCompact(d.reservesCashCents)} reserves{' '}
-                <span
-                  title={`Segregated client-money accounts at ${PARTNER_BANK.name}. ${PARTNER_BANK.dgsNote}`}
-                  className="cursor-help"
-                >
-                  <Badge tone="brass">Segregated · DGS</Badge>
+              <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span>
+                  {eurCompact(d.depositsCashCents)} deposits · {eurCompact(d.reservesCashCents)}{' '}
+                  reserves
                 </span>
+                <TrustMark
+                  title={`Segregated client-money accounts at ${PARTNER_BANK.name}. ${PARTNER_BANK.dgsNote}`}
+                >
+                  Segregated · DGS-protected
+                </TrustMark>
               </span>
             }
           />
@@ -94,7 +96,7 @@ export default function Dashboard() {
       </div>
 
       {/* Role-specific widget grid */}
-      <div className="grid grid-cols-6 gap-5">{widgets}</div>
+      <div className="grid grid-cols-6 gap-4">{widgets}</div>
     </div>
   )
 }
@@ -106,8 +108,8 @@ function ActionQueue() {
   const actions = actionQueue(world)
   if (actions.length === 0) return null
   return (
-    <div className="border rule border-l-2 border-l-[#B4392E] bg-white/40 px-4 py-2.5">
-      <div className="mb-1.5 text-[10px] uppercase tracking-[0.12em] text-greyx">
+    <div className="border rule border-l-2 border-l-[#B4392E] bg-white/40 px-4 py-2">
+      <div className="mb-2 text-[10px] uppercase tracking-[0.1em] text-greyx">
         Needs attention today
       </div>
       <div className="flex flex-wrap gap-x-6 gap-y-1">
@@ -120,7 +122,7 @@ function ActionQueue() {
               setScreen(a.screen)
             }}
           >
-            <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[#B4392E] align-middle" />
+            <span className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-[#B4392E] align-middle" />
             {a.title} <span className="text-brass">→</span>
           </button>
         ))}
@@ -140,7 +142,7 @@ function widgetsFor(world: DemoWorld): ReactNode {
         <CashFlowWidget world={world} months={6} span={4} title="Cash-flow timeline — 6 months" />
         <LeaseCalendarWidget world={world} />
         <NoiBridgeWidget world={world} span={4} />
-        <RevenueDecompositionWidget world={world} />
+        <AccountValueWidget world={world} />
       </>
     )
   }
@@ -153,7 +155,7 @@ function widgetsFor(world: DemoWorld): ReactNode {
         <CashFlowWidget world={world} months={6} span={4} title="Cash-flow timeline — 6 months" />
         <LeaseCalendarWidget world={world} />
         <ProcurementWidget world={world} />
-        <RevenueDecompositionWidget world={world} span={4} />
+        <AccountValueWidget world={world} span={4} />
       </>
     )
   }
@@ -165,7 +167,7 @@ function widgetsFor(world: DemoWorld): ReactNode {
       <EffectiveCostWidget world={world} />
       <ComplianceRingWidget world={world} />
       <CashFlowWidget world={world} months={6} span={4} title="Cash flow — 6 months" />
-      <RevenueDecompositionWidget world={world} />
+      <AccountValueWidget world={world} />
       <OwnerEconomicsWidget world={world} />
     </>
   )
@@ -182,7 +184,7 @@ function ComplianceRingWidget({ world }: { world: DemoWorld }) {
   const warnings = world.findings().filter((f) => f.severity === 'warning').length
   return (
     <Card title="Compliance status" className={span(2)}>
-      <div className="flex items-center gap-5">
+      <div className="flex items-center gap-4">
         <StatusRing total={world.state.leases.length} warnings={warnings} violations={d.violations} />
         <div className="space-y-1 text-sm">
           <div>
@@ -204,35 +206,59 @@ function CashFlowWidget(props: { world: DemoWorld; months: number; span?: number
       {hasData ? (
         <CashFlowChart data={flows} />
       ) : (
-        <div className="text-sm text-greyx">No completed months yet — advance the demo clock.</div>
+        <div className="text-sm text-greyx">No completed months in the period yet.</div>
       )}
     </Card>
   )
 }
 
-function RevenueDecompositionWidget({ world, span: s }: { world: DemoWorld; span?: number }) {
+/**
+ * G §6 access correctness: clients see THEIR economics — yield earned and
+ * savings captured against the fees they pay — never Keystone's revenue
+ * mix, take or margin (those live only in internal views).
+ */
+function AccountValueWidget({ world, span: s }: { world: DemoWorld; span?: number }) {
   const d = world.dashboard()
+  const year = world.today.slice(0, 4)
+  let feesPaid = 0
+  for (const event of world.journal.all) {
+    if (!event.date.startsWith(year)) continue
+    if (event.kind === 'saas_fee' || event.kind === 'saas_fee_flat') {
+      feesPaid += event.postings
+        .filter((p) => p.direction === 'credit' && p.account === 'income:fees:saas')
+        .reduce((sum, p) => sum + p.amountCents, 0)
+    }
+    if (event.kind === 'savings_success_fee') {
+      feesPaid += event.postings
+        .filter((p) => p.direction === 'credit' && p.account === 'income:fees:savings_share')
+        .reduce((sum, p) => sum + p.amountCents, 0)
+    }
+  }
+  const savingsCaptured = world
+    .savingsOpportunities()
+    .filter((o) => o.executed)
+    .reduce((sum, o) => sum + o.savingsCents, 0)
+  const net = d.ownerYieldYtdCents + savingsCaptured - feesPaid
   return (
-    <Card title="Revenue / unit — trailing 12 months" className={span(s ?? 2)}>
+    <Card title="Your account — value this year" className={span(s ?? 2)}>
       <table className="w-full text-sm">
         <tbody>
-          <Row label="SaaS fee" value={eur(d.revenuePerUnit.saas)} />
-          <Row label="NIM share" value={eur(d.revenuePerUnit.nim)} />
-          <Row label="Interchange" value={eur(d.revenuePerUnit.interchange)} />
-          <Row label="Savings & services" value={eur(d.revenuePerUnit.savings)} />
+          <Row label="Yield earned YTD" value={eur(d.ownerYieldYtdCents)} />
+          <Row label="Savings captured" value={eur(savingsCaptured)} />
+          <Row label="Fees paid YTD" value={`− ${eur(feesPaid)}`} />
           <tr className="border-t rule font-semibold">
-            <td className="py-1.5">Total / unit / yr</td>
-            <td className="py-1.5 text-right">{eur(d.revenuePerUnit.total)}</td>
+            <td className="py-2">Net value</td>
+            <td className={`py-2 text-right ${net >= 0 ? 'text-[#3D6B47]' : ''}`}>{eur(net)}</td>
           </tr>
         </tbody>
       </table>
       {d.pricingMode === 'flat_fee' && (
         <div className="mt-3 border border-brass px-3 py-2 text-xs text-brass">
-          Yield failsafe active — flat-fee mode; the floor holds.
+          Flat-fee pricing currently applies while rates are low — your yield floor holds.
         </div>
       )}
       <div className="mt-2 text-[11px] text-greyx">
-        folded from the year's income postings · DFR today {pct(d.dfr)}
+        yield accrues at {pct(d.dfr * 0.6)} on segregated balances
       </div>
     </Card>
   )
@@ -322,7 +348,7 @@ function ArrearsAgingWidget({ world }: { world: DemoWorld }) {
                 opacity: bucket.amountCents > 0 ? 1 : 0.15,
               }}
             />
-            <div className="mt-1 text-[10px] uppercase tracking-[0.08em] text-greyx">{bucket.label}d</div>
+            <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-greyx">{bucket.label}d</div>
           </button>
         ))}
       </div>
@@ -407,13 +433,17 @@ function NoiBridgeWidget({ world, span: s }: { world: DemoWorld; span?: number }
 // ── institution widgets ──────────────────────────────────────────────────────
 
 function OccupancyWidget({ world }: { world: DemoWorld }) {
-  const trend = occupancyTrend(world, 6)
-  const current = world.state.leases.filter((l) => !l.moveOutDate || l.moveOutDate > world.today).length
+  // G §3: computed from real move-in/out events over the trailing 12 months.
+  const trend = occupancyTrend(world, 12)
+  const units = Math.max(1, world.state.persona.properties.length)
+  const current = world.state.leases.filter(
+    (l) => l.startDate <= world.today && (!l.moveOutDate || l.moveOutDate > world.today),
+  ).length
   return (
-    <Card title="Occupancy trend" className={span(2)}>
+    <Card title="Occupancy — trailing 12 months" className={span(2)}>
       <div className="text-2xl font-semibold">
-        {current}
-        <span className="text-base font-normal text-greyx"> / {world.state.persona.properties.length} occupied</span>
+        {((current / units) * 100).toFixed(1)}%
+        <span className="text-base font-normal text-greyx"> · {current} / {units} today</span>
       </div>
       <TrendLine data={trend.map((t) => ({ month: t.month, value: t.occupied }))} height={120} moneyAxis={false} color={CHART_COLORS.ink} />
     </Card>
@@ -455,11 +485,6 @@ function ProcurementWidget({ world }: { world: DemoWorld }) {
           </Badge>
         ))}
       </div>
-      {world.state.persona.storyTags.sampleNote && (
-        <div className="mt-3 text-xs text-greyx">
-          Loaded: {world.state.persona.storyTags.sampleNote} — durable fees + the savings engine carry the model at low float.
-        </div>
-      )}
     </Card>
   )
 }
@@ -467,8 +492,8 @@ function ProcurementWidget({ world }: { world: DemoWorld }) {
 function Row(props: { label: string; value: string }) {
   return (
     <tr className="border-t rule first:border-t-0">
-      <td className="py-1.5 text-greyx">{props.label}</td>
-      <td className="py-1.5 text-right">{props.value}</td>
+      <td className="py-2 text-greyx">{props.label}</td>
+      <td className="py-2 text-right">{props.value}</td>
     </tr>
   )
 }

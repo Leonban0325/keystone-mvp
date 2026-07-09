@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../store'
-import { eurCompact } from '../format'
+import { eurCompact, num } from '../format'
 import { Badge, Card } from '../components'
 
 /** Segment C · the Partner Console — one contract, thousands of units behind it. */
@@ -13,13 +13,13 @@ export default function PartnerConsole() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex items-baseline justify-between">
         <h1 className="text-xl font-semibold tracking-tight">Partner Console</h1>
         <div className="text-sm text-greyx">{world.state.persona.subtitle}</div>
       </div>
 
-      <div className="grid grid-cols-2 gap-5">
+      <div className="grid grid-cols-2 gap-4">
         {partner.funnel && <FunnelCard funnel={partner.funnel} />}
         {partner.revShare && <RevShareCard revShare={partner.revShare} />}
         {partner.apiKeys && <ApiKeysCard keys={partner.apiKeys} />}
@@ -48,12 +48,12 @@ function FunnelCard(props: {
     <Card title="Activation funnel">
       <div className="flex items-baseline gap-4">
         <div>
-          <div className="text-2xl font-semibold">{eligible.toLocaleString('en-IE')}</div>
+          <div className="text-2xl font-semibold">{num(eligible)}</div>
           <div className="text-xs text-greyx">eligible units on platform</div>
         </div>
         <div className="text-2xl text-greyx">→</div>
         <div>
-          <div className="text-2xl font-semibold text-[#3D6B47]">{activated.toLocaleString('en-IE')}</div>
+          <div className="text-2xl font-semibold text-[#3D6B47]">{num(activated)}</div>
           <div className="text-xs text-greyx">activated on Keystone</div>
         </div>
         <div className="ml-auto text-sm text-greyx">
@@ -99,20 +99,20 @@ function RevShareCard(props: {
       <table className="w-full text-sm">
         <tbody>
           <tr className="border-t rule first:border-t-0">
-            <td className="py-1.5 text-greyx">Activated units</td>
-            <td className="py-1.5 text-right">{activatedUnits.toLocaleString('en-IE')}</td>
+            <td className="py-2 text-greyx">Activated units</td>
+            <td className="py-2 text-right">{num(activatedUnits)}</td>
           </tr>
           <tr className="border-t rule">
-            <td className="py-1.5 text-greyx">Revenue / unit / yr</td>
-            <td className="py-1.5 text-right">{eurCompact(perUnitAnnualCents)}</td>
+            <td className="py-2 text-greyx">Revenue / unit / yr</td>
+            <td className="py-2 text-right">{eurCompact(perUnitAnnualCents)}</td>
           </tr>
           <tr className="border-t rule">
-            <td className="py-1.5 text-greyx">Gross ARR on activated base</td>
-            <td className="py-1.5 text-right">{eurCompact(gross)}</td>
+            <td className="py-2 text-greyx">Gross ARR on activated base</td>
+            <td className="py-2 text-right">{eurCompact(gross)}</td>
           </tr>
           <tr className="border-t rule font-semibold">
-            <td className="py-1.5">Partner share ({(partnerSharePct * 100).toFixed(0)}%)</td>
-            <td className="py-1.5 text-right">{eurCompact(partnerCut)}</td>
+            <td className="py-2">Partner share ({(partnerSharePct * 100).toFixed(0)}%)</td>
+            <td className="py-2 text-right">{eurCompact(partnerCut)}</td>
           </tr>
         </tbody>
       </table>
@@ -131,9 +131,9 @@ function ApiKeysCard(props: { keys: { label: string; key: string; created: strin
         <tbody>
           {props.keys.map((k) => (
             <tr key={k.label} className="border-t rule first:border-t-0">
-              <td className="py-1.5">{k.label}</td>
-              <td className="py-1.5 font-mono text-xs">{k.key}</td>
-              <td className="py-1.5 text-right text-xs text-greyx">created {k.created}</td>
+              <td className="py-2">{k.label}</td>
+              <td className="py-2 font-mono text-xs">{k.key}</td>
+              <td className="py-2 text-right text-xs text-greyx">created {k.created}</td>
             </tr>
           ))}
         </tbody>
@@ -225,7 +225,7 @@ function Step(props: { label: string; value: number; money?: boolean }) {
   return (
     <div>
       <div className="text-xl font-semibold">
-        {props.money ? eurCompact(props.value) : props.value.toLocaleString('en-IE')}
+        {props.money ? eurCompact(props.value) : num(props.value)}
       </div>
       <div className="text-xs text-greyx">{props.label}</div>
     </div>
@@ -285,14 +285,14 @@ function BranchLeaderboard(props: {
         <tbody>
           {live.slice(0, 8).map((b, i) => (
             <tr key={b.name} className="border-t rule first:border-t-0">
-              <td className="py-1.5 text-greyx">{i + 1}</td>
-              <td className="py-1.5">{b.name}</td>
-              <td className="w-1/2 py-1.5">
+              <td className="py-2 text-greyx">{i + 1}</td>
+              <td className="py-2">{b.name}</td>
+              <td className="w-1/2 py-2">
                 <div className="h-2 border rule">
                   <div className="h-full bg-brass" style={{ width: `${(b.units / max) * 100}%` }} />
                 </div>
               </td>
-              <td className="py-1.5 text-right">{b.units}</td>
+              <td className="py-2 text-right">{b.units}</td>
             </tr>
           ))}
         </tbody>

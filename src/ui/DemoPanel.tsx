@@ -5,7 +5,11 @@ import { Badge, Button } from './components'
 import { BASE_DFR, KEYSTONE_MIN_TAKE, splitYield } from '../engine/simulators/economics'
 import { personaIds, buildPersona } from '../engine/seed/personas'
 
-/** Demo control panel — the gear. Hidden entirely under ?demo=clean. */
+/**
+ * Internal operations console — the gear. Presenter/ops tooling, hidden
+ * under ?demo=clean; the prototype boundary is disclosed via "About this
+ * prototype", not stamped here (Addendum G §1).
+ */
 export default function DemoPanel(props: { onClose: () => void }) {
   const { world, rev, mutate, resetSeed, switchPersona, personaId, whiteLabel, setWhiteLabel } =
     useApp()
@@ -17,25 +21,15 @@ export default function DemoPanel(props: { onClose: () => void }) {
   return (
     <aside className="fixed inset-y-0 right-0 z-20 w-96 overflow-y-auto border-l rule bg-paper p-6 shadow-none">
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.14em]">Demo controls</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-[0.14em]">Internal console</h2>
         <button onClick={props.onClose} className="text-greyx hover:text-ink">
           ✕
         </button>
       </div>
 
       <section className="mb-6">
-        <div className="mb-2 text-[11px] uppercase tracking-[0.14em] text-greyx">Clock</div>
-        <div className="flex gap-2">
-          <Button onClick={() => mutate((w) => w.advanceDays(1))}>+1 day</Button>
-          <Button onClick={() => mutate((w) => w.advanceDays(7))}>+7 days</Button>
-          <Button onClick={() => mutate((w) => w.advanceMonths(1))}>+1 month</Button>
-        </div>
-        <div className="mt-2 text-xs text-greyx">Today: {world.today}</div>
-      </section>
-
-      <section className="mb-6">
         <div className="mb-2 text-[11px] uppercase tracking-[0.14em] text-greyx">
-          ECB deposit facility rate — watch the NIM
+          Rate scenario — ECB deposit facility
         </div>
         <input
           type="range"
@@ -103,13 +97,13 @@ export default function DemoPanel(props: { onClose: () => void }) {
           <Button onClick={() => mutate((w) => w.forceRTransaction(forceRLease))}>Fail SDD</Button>
         </div>
         <p className="mt-2 text-xs text-greyx">
-          The next collection bounces (AM04), the dunning FSM starts, and every posting is visible
-          in the Money journal.
+          Returns the next collection unpaid (AM04); the dunning ladder starts and every posting
+          lands in the Money journal.
         </p>
       </section>
 
       <section className="mb-6">
-        <div className="mb-2 text-[11px] uppercase tracking-[0.14em] text-greyx">Persona</div>
+        <div className="mb-2 text-[11px] uppercase tracking-[0.14em] text-greyx">Workspace</div>
         <div className="space-y-1">
           {personaIds().map((id) => {
             const p = buildPersona(id)
@@ -151,7 +145,7 @@ export default function DemoPanel(props: { onClose: () => void }) {
       )}
 
       <section>
-        <Button onClick={resetSeed}>Reset demo to seed</Button>
+        <Button onClick={resetSeed}>Restore dataset baseline</Button>
       </section>
     </aside>
   )

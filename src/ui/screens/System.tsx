@@ -82,10 +82,10 @@ export default function System() {
       </div>
 
       <p className="max-w-3xl text-sm text-greyx">
-        The generator ran once at seed time; twelve months of journal events per persona are
-        persisted in Postgres and served by the API below. The browser queries — it generates
-        nothing. If the API is unreachable this page says so, and the same deterministic engine
-        runs locally instead: identical numbers either way.
+        Twelve months of journal events per workspace are persisted in Postgres and served by
+        the API below — the browser queries, it generates nothing. If the API is unreachable
+        this page says so, and the same deterministic engine runs locally instead: identical
+        numbers either way.
       </p>
 
       <div className="grid grid-cols-2 gap-6">
@@ -117,10 +117,10 @@ export default function System() {
             <tbody>
               {[...RULESETS.entries()].map(([jurisdiction, ruleset]) => (
                 <tr key={jurisdiction} className="border-b rule">
-                  <td className="py-1.5 font-medium">{jurisdiction}</td>
-                  <td className="py-1.5 tabular-nums text-greyx">v{ruleset.version}</td>
-                  <td className="py-1.5 tabular-nums text-greyx">{ruleset.rules.length} rules</td>
-                  <td className="py-1.5 text-right text-xs text-greyx">
+                  <td className="py-2 font-medium">{jurisdiction}</td>
+                  <td className="py-2 tabular-nums text-greyx">v{ruleset.version}</td>
+                  <td className="py-2 tabular-nums text-greyx">{ruleset.rules.length} rules</td>
+                  <td className="py-2 text-right text-xs text-greyx">
                     {findings.filter((f) => f.ruleId.startsWith(jurisdiction)).length} open finding(s)
                   </td>
                 </tr>

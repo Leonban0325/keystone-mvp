@@ -120,7 +120,7 @@ export default function CommandBar() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 border rule px-2 py-0.5 text-xs text-greyx hover:border-ink hover:text-ink"
+        className="flex items-center gap-2 border rule px-2 py-1 text-xs text-greyx hover:border-ink hover:text-ink"
         title="Search or ask anything"
       >
         <span>Search / Ask</span>
@@ -133,7 +133,7 @@ export default function CommandBar() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 border rule px-2 py-0.5 text-xs text-greyx"
+        className="flex items-center gap-2 border rule px-2 py-1 text-xs text-greyx"
       >
         <span>Search / Ask</span>
         <span className="border rule px-1 text-[10px]">⌘K</span>
@@ -150,7 +150,7 @@ export default function CommandBar() {
             {(['search', 'ask'] as const).map((m) => (
               <button
                 key={m}
-                className={`px-4 py-2 uppercase tracking-[0.08em] ${mode === m ? 'border-b-2 border-brass text-ink' : 'text-greyx'}`}
+                className={`px-4 py-2 uppercase tracking-[0.1em] ${mode === m ? 'border-b-2 border-brass text-ink' : 'text-greyx'}`}
                 onClick={() => {
                   setMode(m)
                   setAnswer(null)
@@ -219,11 +219,11 @@ export default function CommandBar() {
 
             {mode === 'ask' && !answer && !asking && (
               <div className="px-4 py-3 text-sm text-greyx">
-                <div className="mb-2 text-[10px] uppercase tracking-[0.08em]">Try one</div>
+                <div className="mb-2 text-[10px] uppercase tracking-[0.1em]">Try one</div>
                 {EXAMPLE_QUESTIONS.map((q) => (
                   <button
                     key={q}
-                    className="block w-full border-b rule py-1.5 text-left hover:text-ink"
+                    className="block w-full border-b rule py-2 text-left hover:text-ink"
                     onClick={() => {
                       setQuery(q)
                       void runAsk(q)
@@ -267,7 +267,7 @@ export default function CommandBar() {
               </div>
             )}
           </div>
-          <div className="border-t rule px-4 py-2 text-[10px] uppercase tracking-[0.08em] text-greyx">
+          <div className="border-t rule px-4 py-2 text-[10px] uppercase tracking-[0.1em] text-greyx">
             {mode === 'search'
               ? 'tenant → quittance · owner/lease → money · property → detail card'
               : 'AI writes the query · deterministic code executes it · rows → money'}

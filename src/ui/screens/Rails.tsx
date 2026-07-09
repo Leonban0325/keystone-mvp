@@ -67,7 +67,7 @@ function collectionFlow(intent: JournalEvent, resolution?: JournalEvent): FlowSt
       at: intent.date,
       time: stepTime(intent.id, 'submit', 2),
       ref: intent.id,
-      detail: 'Collection presented — ledger posts the INTENT leg',
+      detail: 'Collection presented — intent leg posted',
       postings: intent,
     },
     {
@@ -75,7 +75,7 @@ function collectionFlow(intent: JournalEvent, resolution?: JournalEvent): FlowSt
       system: 'Partner bank',
       at: intent.date,
       time: stepTime(intent.id, 'settling', 3),
-      detail: 'In flight — funds sit in a per-movement suspense account, never with Keystone',
+      detail: 'In flight — funds in a per-movement suspense account',
     },
   ]
   if (!resolution) return steps
@@ -96,7 +96,7 @@ function collectionFlow(intent: JournalEvent, resolution?: JournalEvent): FlowSt
         system: 'Keystone ledger',
         at: resolution.date,
         time: stepTime(resolution.id, 'retry', 5),
-        detail: 'Compensating entry restores the receivable; next cycle sweeps the full balance — a real state machine, not a happy path',
+        detail: 'Compensating entry restores the receivable; the next cycle sweeps the full balance',
       },
     )
   } else {
@@ -108,7 +108,7 @@ function collectionFlow(intent: JournalEvent, resolution?: JournalEvent): FlowSt
         time: stepTime(resolution.id, 'settle', 4),
         ref: resolution.id,
         tone: 'ok',
-        detail: 'Funds land in the segregated operating pool — ledger posts the SETTLEMENT leg',
+        detail: 'Funds land in the segregated operating pool — settlement leg posted',
         postings: resolution,
       },
       {
@@ -203,16 +203,8 @@ function hash(s: string): number {
   return h
 }
 
-const SYSTEM_STAGE: Record<FlowStep['system'], number> = {
-  'EMI / escrow': 2,
-  'Partner bank': 3,
-  'KYC provider': 2,
-  'Keystone orchestration': 4,
-  'Keystone ledger': 4,
-}
-
 export default function Rails() {
-  const { world, rev, focus, setFocus, mutate, demoClean } = useApp()
+  const { world, rev, focus, setFocus, mutate } = useApp()
   void rev
 
   // Pick the focused flow: a specific journal event (from the Money
@@ -280,8 +272,6 @@ export default function Rails() {
     return () => clearInterval(timer)
   }, [steps, animKey])
 
-  const activeStep = visible > 0 && visible <= steps.length ? steps[visible - 1] : null
-  const activeStage = activeStep ? SYSTEM_STAGE[activeStep.system] : 0
   const failed = steps.some((s) => s.tone === 'fail')
 
   // Live pending collections — the demoable failure path (§1.3).
@@ -297,90 +287,19 @@ export default function Rails() {
         : 'Rent collection (SDD)'
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex items-baseline justify-between">
-        <h1 className="text-xl font-semibold tracking-tight">Money rails</h1>
-        <div className="flex items-center gap-2">
-          {!demoClean && <Badge tone="grey">Simulated rails</Badge>}
-          <Badge tone="ink">{PARTNER_BANK.name}</Badge>
-        </div>
+        <h1 className="text-xl font-semibold tracking-tight">Payment processing</h1>
+        <Badge tone="ink">{PARTNER_BANK.name}</Badge>
       </div>
-      <p className="max-w-3xl text-sm text-greyx">
-        The tripartite structure: tenant money moves over a per-lease virtual IBAN into an
-        escrow layer and lands segregated at {PARTNER_BANK.short}. Keystone orchestrates every
-        step and holds none of it — <span className="text-ink">funds never enter Keystone's
-        balance sheet</span>.
-      </p>
 
-      {/* §1.2 — the architecture, Keystone beside the flow */}
-      <Card title="The flow — control, not custody">
-        <div className="grid grid-cols-4 gap-0 text-sm">
-          <StageBox
-            n={1}
-            active={activeStage === 1}
-            title="Tenant"
-            body="SDD mandate · pre-notified per the SEPA rulebook"
-          />
-          <StageBox
-            n={2}
-            active={activeStage === 2}
-            title="Virtual IBAN → EMI / escrow"
-            body={`Per-lease inbound reference · ${RAILS.emiClass} — the movement`}
-          />
-          <StageBox
-            n={3}
-            active={activeStage === 3}
-            title={`${PARTNER_BANK.short} — the vault`}
-            body={
-              <span>
-                <span className="mb-1 block text-[11px] text-greyx">{PARTNER_BANK.descriptor}</span>
-                <span className="mt-1 grid grid-cols-2 gap-1">
-                  <span className="border rule bg-white/50 px-1.5 py-1 text-[11px]">
-                    Deposits pool
-                    <span className="block text-[10px] text-greyx">ring-fenced · tenant money</span>
-                  </span>
-                  <span className="border rule bg-white/50 px-1.5 py-1 text-[11px]">
-                    Reserves pool
-                    <span className="block text-[10px] text-greyx">ring-fenced · owner money</span>
-                  </span>
-                </span>
-                <span className="mt-1.5 flex items-center gap-1.5">
-                  <Badge tone="green">DGS-protected</Badge>
-                  <span className="text-[10px] text-greyx" title={PARTNER_BANK.dgsNote}>
-                    insolvency-remote ⓘ
-                  </span>
-                </span>
-              </span>
-            }
-          />
-          <StageBox
-            n={4}
-            active={activeStage === 4}
-            dashed
-            title="Keystone — beside the flow"
-            body={
-              <span>
-                Orchestrates mandates, screening, segregation and payouts over the rail APIs.
-                <span className="mt-1 block font-medium text-ink">
-                  Funds never pass through Keystone's own balance sheet.
-                </span>
-              </span>
-            }
-          />
-        </div>
-        <div className="mt-2 flex items-center gap-2 text-[11px] text-greyx">
-          <span className="inline-block h-0 w-10 border-t border-dashed border-greyx" />
-          dashed = orchestration link (control) · solid = money movement (custody chain)
-        </div>
-      </Card>
-
-      <div className="grid grid-cols-5 gap-5">
+      <div className="grid grid-cols-5 gap-4">
         {/* §1.3 — two-phase settlement, real states, real postings */}
-        <Card title={`Two-phase settlement — ${flowTitle}`} className="col-span-3">
+        <Card title={`Processing — ${flowTitle}`} className="col-span-3">
           {!selected && (
             <EmptyState
               title="No money movement selected."
-              hint="Open Money and click any SDD intent, settlement, R-transaction, deposit or distribution row — it lands here pre-focused."
+              hint="Open Money and click the processing link on any payment row."
             />
           )}
           {selected && (
@@ -413,7 +332,7 @@ export default function Rails() {
                         <div className="tabular-nums">
                           {formatDate(step.at)} · {step.time}
                         </div>
-                        <div className="mt-0.5">{step.system}</div>
+                        <div className="mt-1">{step.system}</div>
                       </div>
                       <div>
                         <div className="flex items-center gap-2 text-sm">
@@ -427,15 +346,15 @@ export default function Rails() {
                           )}
                         </div>
                         {shown && step.detail && (
-                          <div className="mt-0.5 text-xs text-greyx">{step.detail}</div>
+                          <div className="mt-1 text-xs text-greyx">{step.detail}</div>
                         )}
                         {shown && step.postings && (
-                          <table className="mt-1.5 w-full border rule bg-white/50 text-[11px]">
+                          <table className="mt-2 w-full border rule bg-white/50 text-[11px]">
                             <tbody>
                               {step.postings.postings.map((p, pi) => (
                                 <tr key={pi}>
-                                  <td className="px-2 py-0.5 font-mono">{p.account}</td>
-                                  <td className="px-2 py-0.5 text-right tabular-nums">
+                                  <td className="px-2 py-1 font-mono">{p.account}</td>
+                                  <td className="px-2 py-1 text-right tabular-nums">
                                     {p.direction === 'debit' ? `D ${eur(p.amountCents)}` : `C ${eur(p.amountCents)}`}
                                   </td>
                                 </tr>
@@ -451,32 +370,31 @@ export default function Rails() {
               {visible >= steps.length && (
                 <div className="mt-3 border-t rule pt-2 text-xs text-greyx">
                   {failed
-                    ? 'Failure path shown: the compensating entry keeps the ledger balanced and the receivable open — retry sweeps it next cycle.'
-                    : 'Both ledger legs posted and reconciled. The rail confirmed; the double-entry happened alongside it.'}
+                    ? 'Returned unpaid — the compensating entry keeps the ledger balanced and the receivable open for retry.'
+                    : 'Both ledger legs posted and reconciled against the rail confirmation.'}
                 </div>
               )}
             </>
           )}
         </Card>
 
-        <div className="col-span-2 space-y-5">
-          {/* §1.3 — demoable failure path on live pending collections */}
+        <div className="col-span-2 space-y-4">
           <Card title={`In flight now — ${pending.length}`}>
             {pending.length === 0 && (
               <EmptyState
                 title="Nothing in flight."
-                hint="Advance the demo clock past a payment day (⚙ panel) — collections present and appear here mid-settlement."
+                hint="Collections appear here between presentation and settlement."
               />
             )}
             <table className="w-full text-sm">
               <tbody>
                 {pending.slice(0, 6).map((p) => (
                   <tr key={p.intent.id} className="border-t rule first:border-t-0">
-                    <td className="max-w-44 truncate py-1.5 text-xs">{p.intent.memo}</td>
-                    <td className="py-1.5 text-right text-xs tabular-nums">
+                    <td className="max-w-44 truncate py-2 text-xs">{p.intent.memo}</td>
+                    <td className="py-2 text-right text-xs tabular-nums">
                       {eur(p.intent.postings[0].amountCents)}
                     </td>
-                    <td className="py-1.5 text-right">
+                    <td className="py-2 text-right">
                       <Button tone="quiet" onClick={() => setConfirming({ id: p.intent.id, outcome: 'settle' })}>
                         Settle
                       </Button>{' '}
@@ -490,8 +408,7 @@ export default function Rails() {
             </table>
           </Card>
 
-          {/* §1.4 — connections strip: looks real, claims nothing false */}
-          <Card title="Connections">
+          <Card title="Rail connections">
             <table className="w-full text-sm">
               <tbody>
                 {[
@@ -505,23 +422,19 @@ export default function Rails() {
                       <div className="flex items-center gap-2">
                         <span className="inline-block h-2 w-2 rounded-full bg-[#3D6B47]" />
                         <span className="font-medium">{c.name}</span>
-                        {!demoClean && <Badge tone="grey">Simulated</Badge>}
                       </div>
-                      <div className="mt-0.5 pl-4 text-[11px] text-greyx">{c.sub}</div>
+                      <div className="mt-1 pl-4 text-[11px] text-greyx">{c.sub}</div>
                     </td>
                     <td className="py-2 text-right align-top text-[11px] text-greyx">
-                      <div>Connected</div>
+                      <div>Active</div>
                       <div className="tabular-nums">
-                        heartbeat {formatDate(world.today)} {stepTime(world.today, `hb${i}`)}
+                        updated {formatDate(world.today)} {stepTime(world.today, `hb${i}`)}
                       </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="mt-2 border-t rule pt-2 text-[11px] text-greyx">
-              Target launch partners: tier-one BaFin-regulated institutions.
-            </div>
           </Card>
         </div>
       </div>
@@ -552,32 +465,6 @@ export default function Rails() {
           )
         }}
       />
-    </div>
-  )
-}
-
-function StageBox(props: {
-  n: number
-  title: string
-  body: React.ReactNode
-  active?: boolean
-  dashed?: boolean
-}) {
-  return (
-    <div className="flex items-stretch">
-      {props.n > 1 && (
-        <div className="flex w-5 shrink-0 items-center justify-center text-greyx">
-          {props.dashed ? '⤳' : '▶'}
-        </div>
-      )}
-      <div
-        className={`flex-1 border p-3 transition-colors ${
-          props.dashed ? 'border-dashed' : ''
-        } ${props.active ? 'border-brass bg-white/70' : 'rule bg-white/40'}`}
-      >
-        <div className="text-[11px] font-semibold uppercase tracking-[0.12em]">{props.title}</div>
-        <div className="mt-1 text-xs text-greyx">{props.body}</div>
-      </div>
     </div>
   )
 }

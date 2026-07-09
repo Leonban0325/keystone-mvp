@@ -118,13 +118,8 @@ export default function Money() {
   }
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-xl font-semibold tracking-tight">Money</h1>
-        <Button tone="quiet" onClick={() => setScreen('rails')}>
-          View money rails →
-        </Button>
-      </div>
+    <div className="space-y-4">
+      <h1 className="text-xl font-semibold tracking-tight">Money</h1>
 
       {/* §4 · roll-up before drill-down */}
       <Card title="Roll-up — the journal folded by dimension">
@@ -172,18 +167,18 @@ export default function Money() {
                       : setLeaseFilter(leaseFilter === row.id ? '' : row.id)
                   }
                 >
-                  <td className="max-w-72 truncate py-1.5 font-medium">
+                  <td className="max-w-72 truncate py-2 font-medium">
                     {row.label}
                     {!row.children && leaseFilter === row.id && (
                       <Badge tone="brass"> journal filtered</Badge>
                     )}
                   </td>
-                  <td className="py-1.5 text-right">{eurCompact(row.inCents)}</td>
-                  <td className="py-1.5 text-right">{eurCompact(row.outCents)}</td>
-                  <td className={`py-1.5 text-right ${row.netCents < 0 ? 'text-[#B4392E]' : ''}`}>
+                  <td className="py-2 text-right">{eurCompact(row.inCents)}</td>
+                  <td className="py-2 text-right">{eurCompact(row.outCents)}</td>
+                  <td className={`py-2 text-right ${row.netCents < 0 ? 'text-[#B4392E]' : ''}`}>
                     {eurCompact(row.netCents)}
                   </td>
-                  <td className="py-1.5 text-right">{eurCompact(row.balanceCents)}</td>
+                  <td className="py-2 text-right">{eurCompact(row.balanceCents)}</td>
                 </tr>
               ))}
             </tbody>
@@ -191,7 +186,7 @@ export default function Money() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-2 gap-5">
+      <div className="grid grid-cols-2 gap-4">
         <Card title="Payout waterfall — last month">
           <select
             className="mb-3 border rule bg-transparent px-2 py-1 text-sm"
@@ -210,7 +205,7 @@ export default function Money() {
         <Card title={`Pending settlements — ${pending.length}`}>
           {pending.length === 0 && (
             <div className="text-sm text-greyx">
-              Nothing in flight. SDD collections fire on the 3rd — advance the clock.
+              Nothing in flight. Collections present on each lease's payment day.
             </div>
           )}
           <div className="max-h-64 overflow-y-auto">
@@ -218,13 +213,18 @@ export default function Money() {
               <tbody>
                 {pending.slice(0, 30).map((p) => (
                   <tr key={p.intent.id} className="border-t rule first:border-t-0">
-                    <td className="py-2">{p.intent.memo}</td>
-                    <td className="py-2 text-right">{eur(p.intent.postings[0].amountCents)}</td>
-                    <td className="py-2 text-right">
+                    <td className="max-w-44 truncate py-2" title={p.intent.memo}>
+                      {p.intent.memo}
+                    </td>
+                    <td className="py-2 text-right tabular-nums">
+                      {eur(p.intent.postings[0].amountCents)}
+                    </td>
+                    <td className="whitespace-nowrap py-2 text-right">
                       <span className="mr-2 text-xs text-greyx">
                         settles {formatDate(p.settleOn)}
                       </span>
                       <Button
+                        size="sm"
                         onClick={() => {
                           mutate((w) => w.resolvePendingNow(p.intent.id, 'settle'))
                           toast('Settled — settlement leg posted and reconciled.')
@@ -233,6 +233,7 @@ export default function Money() {
                         Settle now
                       </Button>{' '}
                       <Button
+                        size="sm"
                         onClick={() => {
                           mutate((w) => w.resolvePendingNow(p.intent.id, 'fail'))
                           toast('R-transaction — compensating entry posted.', 'info')
@@ -326,8 +327,8 @@ function EventRow(props: {
         className={`cursor-pointer border-t rule hover:bg-white/50 ${props.justPosted ? 'row-flash' : ''}`}
         onClick={props.onToggle}
       >
-        <td className="py-1.5 text-greyx">{event.date}</td>
-        <td className="py-1.5">
+        <td className="py-2 text-greyx">{event.date}</td>
+        <td className="py-2">
           {KIND_LABELS[event.kind] ?? event.kind}
           {event.phase && (
             <span className="ml-2">
@@ -335,19 +336,19 @@ function EventRow(props: {
             </span>
           )}
         </td>
-        <td className="py-1.5 text-greyx">{event.memo ?? '—'}</td>
-        <td className="py-1.5 text-right">
+        <td className="py-2 text-greyx">{event.memo ?? '—'}</td>
+        <td className="py-2 text-right">
           {eur(total)}
           {props.onRails && (
             <button
               className="ml-2 text-xs text-brass hover:underline"
-              title="Open on the money-rails view"
+              title="View processing detail"
               onClick={(e) => {
                 e.stopPropagation()
                 props.onRails!()
               }}
             >
-              rails →
+              processing →
             </button>
           )}
         </td>
@@ -367,16 +368,16 @@ function EventRow(props: {
               <tbody>
                 {event.postings.map((p, i) => (
                   <tr key={i}>
-                    <td className="py-0.5 font-mono">{p.account}</td>
-                    <td className="py-0.5 text-greyx">
+                    <td className="py-1 font-mono">{p.account}</td>
+                    <td className="py-1 text-greyx">
                       {[p.dims.propertyId, p.dims.leaseId, p.dims.category]
                         .filter(Boolean)
                         .join(' · ') || '—'}
                     </td>
-                    <td className="py-0.5 text-right">
+                    <td className="py-1 text-right">
                       {p.direction === 'debit' ? eur(p.amountCents) : ''}
                     </td>
-                    <td className="py-0.5 text-right">
+                    <td className="py-1 text-right">
                       {p.direction === 'credit' ? eur(p.amountCents) : ''}
                     </td>
                   </tr>

@@ -1,7 +1,7 @@
 import { ReactNode, useEffect, useRef, useState } from 'react'
 import { useApp, Screen } from './store'
 import { formatDate } from './format'
-import { Badge, ToastHost, ViewErrorBoundary } from './components'
+import { AboutPrototypeDialog, Badge, ToastHost, ViewErrorBoundary } from './components'
 import { buildNotices, Notice } from './notifications'
 import { NAV_BY_ROLE } from './rbac'
 import DemoPanel from './DemoPanel'
@@ -26,7 +26,7 @@ const NAV_ITEMS: Record<Screen, string> = {
   leases: 'Properties & Leases',
   compliance: 'Deposits & Compliance',
   money: 'Money',
-  rails: 'Money rails',
+  rails: 'Payment processing',
   card: 'Card & Spend',
   savings: 'Savings Engine',
   reports: 'Reports',
@@ -53,10 +53,11 @@ const SCREENS: Record<Screen, () => ReactNode> = {
 const WATERMARKED: Screen[] = ['money', 'card', 'savings', 'reports']
 
 export default function Shell() {
-  const { screen, setScreen, world, rev, demoClean, mutate, whiteLabel, dataSource, session, logout } =
+  const { screen, setScreen, world, rev, demoClean, whiteLabel, dataSource, session, logout } =
     useApp()
   void rev
   const [panelOpen, setPanelOpen] = useState(false)
+  const [aboutOpen, setAboutOpen] = useState(false)
 
   const persona = world.state.persona
   const nav = [
@@ -71,10 +72,10 @@ export default function Shell() {
 
   return (
     <div className="flex min-h-screen">
-      <aside className="w-56 shrink-0 border-r rule px-5 py-6">
+      <aside className="w-56 shrink-0 border-r rule px-4 py-6">
         <div className="mb-8">
           <div className="text-lg font-semibold tracking-tight">{brandName}</div>
-          <div className="mt-0.5 text-[11px] text-greyx">{persona.name}</div>
+          <div className="mt-1 text-[11px] text-greyx">{persona.name}</div>
           {persona.themeOverride && whiteLabel && (
             <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-greyx">
               powered by Keystone
@@ -86,7 +87,7 @@ export default function Shell() {
             <button
               key={id}
               onClick={() => setScreen(id)}
-              className={`block w-full border-l-2 px-3 py-1.5 text-left text-sm ${
+              className={`block w-full border-l-2 px-3 py-2 text-left text-sm ${
                 screen === id
                   ? 'border-brass font-medium'
                   : 'border-transparent text-greyx hover:text-ink'
@@ -99,7 +100,7 @@ export default function Shell() {
         {/* F §2.3: logout returns to the landing Home; data persists. */}
         <div className="mt-8 border-t rule pt-4">
           {session?.email && (
-            <div className="mb-1.5 truncate text-[11px] text-greyx" title={session.email}>
+            <div className="mb-2 truncate text-[11px] text-greyx" title={session.email}>
               {session.email}
             </div>
           )}
@@ -109,45 +110,36 @@ export default function Shell() {
           >
             Sign out
           </button>
+          {/* G §1: the single honest disclosure path — quiet, off the working screens. */}
+          <button
+            onClick={() => setAboutOpen(true)}
+            className="mt-2 block text-[11px] text-greyx underline-offset-2 hover:text-ink hover:underline"
+          >
+            About this prototype
+          </button>
         </div>
       </aside>
 
       <div className="flex-1">
         <header className="flex items-center justify-between border-b rule px-8 py-3">
           <div className="flex items-center gap-3 text-sm">
-            <span className="text-greyx">Demo date</span>
+            <span className="text-greyx">Books to</span>
             <span className="font-medium">{formatDate(world.today)}</span>
-            <button
-              className="border rule px-2 py-0.5 text-xs hover:border-ink"
-              onClick={() => mutate((w) => w.advanceDays(1))}
+            <span
+              className="text-[10px] uppercase tracking-[0.1em] text-greyx"
+              title="Every figure folds from the append-only journal — the audit trail is the architecture."
             >
-              +1 day
-            </button>
-            <button
-              className="border rule px-2 py-0.5 text-xs hover:border-ink"
-              onClick={() => mutate((w) => w.advanceMonths(1))}
-            >
-              +1 month
-            </button>
-            {!demoClean && (
-              <span
-                className="text-[10px] uppercase tracking-[0.08em] text-greyx"
-                title="Every figure folds from the append-only journal — the audit trail is the architecture."
-              >
-                {dataSource === 'api' ? '⟳ synced · persisted dataset' : '⟳ local engine'}
-              </span>
-            )}
+              {dataSource === 'api' ? '⟳ Synced' : '⟳ Up to date'}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <CommandBar />
             <NotificationBell />
             <Badge tone="ink">{persona.role.replace('_', ' ')}</Badge>
-            {!demoClean && <Badge tone="grey">Simulated rails</Badge>}
-            <Badge tone="green">KYC verified</Badge>
             {!demoClean && (
               <button
                 onClick={() => setPanelOpen(!panelOpen)}
-                title="Demo controls"
+                title="Internal console"
                 className="ml-1 text-lg text-greyx hover:text-ink"
               >
                 ⚙
@@ -168,6 +160,7 @@ export default function Shell() {
         </main>
       </div>
       {panelOpen && !demoClean && <DemoPanel onClose={() => setPanelOpen(false)} />}
+      {aboutOpen && <AboutPrototypeDialog onClose={() => setAboutOpen(false)} />}
       <ToastHost />
     </div>
   )
@@ -203,7 +196,7 @@ function NotificationBell() {
         onClick={() => setOpen(!open)}
         title="Notifications"
         aria-label={`Notifications — ${actionable} need action`}
-        className="relative border rule px-2 py-0.5 text-xs text-greyx hover:border-ink hover:text-ink"
+        className="relative border rule px-2 py-1 text-xs text-greyx hover:border-ink hover:text-ink"
       >
         ◷ {notices.length}
         {actionable > 0 && (
@@ -237,7 +230,7 @@ function NotificationBell() {
                   />
                   <span className="font-medium">{n.title}</span>
                 </div>
-                <div className="mt-0.5 truncate pl-4 text-xs text-greyx">{n.detail}</div>
+                <div className="mt-1 truncate pl-4 text-xs text-greyx">{n.detail}</div>
               </button>
             ))}
           </div>

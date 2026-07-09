@@ -1,6 +1,6 @@
 import { Journal, posting } from './ledger/journal'
 import { ACCOUNTS, JournalEvent } from './ledger/types'
-import { addDays } from './compliance/dates'
+import { addDays, addMonths } from './compliance/dates'
 import { ownerYieldYtdCents, revenueRunRate } from './analytics'
 import { DemoClock } from './simulators/clock'
 import { BASE_DFR, PRICING, splitYield } from './simulators/economics'
@@ -19,6 +19,7 @@ import { Finding } from './compliance/types'
 import { mulberry32 } from './seed/rng'
 import { detectOpportunities, SavingsOpportunity } from './savings/detectors'
 import { DunningStage, Entity, PersonaSeed, Property, SeedLease } from './seed/types'
+import { advanceRecord, startRecord, VerificationRecord } from './kyc'
 
 /** Distribution holdback: kept in owner_payable to cover card spend + arrears. */
 const DISTRIBUTION_BUFFER_CENTS = 500_000
@@ -64,6 +65,8 @@ export interface WorldSnapshot {
   /** Entities/properties added by the rent-roll import wizard. */
   extraEntities: Entity[]
   extraProperties: Property[]
+  /** KYC/KYB records (G §5) — verification is earned and persisted. */
+  verifications?: [string, VerificationRecord][]
 }
 
 export interface WorldState {
@@ -77,6 +80,8 @@ export interface WorldState {
   forceRFrom: Map<string, string>
   pendingIntents: PendingCollection[]
   executedSavings: Set<string>
+  /** partyId → KYC/KYB record. Verified is a state reached, never preset. */
+  verifications: Map<string, VerificationRecord>
   rand: () => number
 }
 
@@ -118,6 +123,7 @@ export class DemoWorld {
       ),
       pendingIntents: snapshot?.pendingIntents ?? [],
       executedSavings: new Set(snapshot?.executedSavings ?? []),
+      verifications: new Map(snapshot?.verifications ?? []),
       rand: mulberry32(0x5eed),
     }
     this.extraLeases = snapshot?.extraLeases ?? []
@@ -225,6 +231,7 @@ export class DemoWorld {
       forceRFrom: [...this.state.forceRFrom],
       pendingIntents: this.state.pendingIntents,
       executedSavings: [...this.state.executedSavings],
+      verifications: [...this.state.verifications],
       leases: this.state.leases,
       extraLeases: this.extraLeases,
       extraEntities: this.extraEntities,
@@ -562,6 +569,25 @@ export class DemoWorld {
     this.state.forceRFrom.delete(leaseId)
   }
 
+  // ── KYC / KYB (G §5): earned verification over curated data ─────────────
+
+  verification(partyId: string): VerificationRecord | undefined {
+    return this.state.verifications.get(partyId)
+  }
+
+  /** Open a verification case. Gating starts here — no step, no badge. */
+  startVerification(partyId: string, name: string, kind: 'individual' | 'company'): void {
+    if (this.state.verifications.has(partyId)) return
+    this.state.verifications.set(partyId, startRecord(partyId, name, kind))
+  }
+
+  /** Run the next pending gate (one UBO at a time on the KYB path). */
+  advanceVerification(partyId: string): void {
+    const record = this.state.verifications.get(partyId)
+    if (!record) return
+    this.state.verifications.set(partyId, advanceRecord(record, this.today))
+  }
+
   // ── Read models ────────────────────────────────────────────────────────
 
   findings(): Finding[] {
@@ -672,6 +698,15 @@ export class DemoWorld {
     const interchange = Math.round(runRate.interchangeAnnualCents / units)
     const savings = Math.round(runRate.savingsShareAnnualCents / units)
     const annualRent = activeLeases(s, this.today).reduce((sum, l) => sum + l.monthlyRentCents, 0) * 12
+    // H §3.2: NOI folds from the ACTUAL lumpy spend history, not a budget scalar.
+    const windowEnd = this.today.slice(0, 8) + '01'
+    const windowStart = addMonths(windowEnd, -12)
+    let spend12 = 0
+    for (const event of this.journal.all) {
+      if (event.kind === 'card_spend' && event.date >= windowStart && event.date < windowEnd) {
+        spend12 += event.postings[0].amountCents
+      }
+    }
 
     return {
       unitCount: units,
@@ -684,7 +719,7 @@ export class DemoWorld {
       revenuePerUnit: { saas, nim, interchange, savings, total: saas + nim + interchange + savings },
       ownerYieldPerUnitCents: Math.round((balances * ownerRate) / units),
       ownerYieldYtdCents: ownerYieldYtdCents(this),
-      noiAnnualCents: annualRent - s.persona.cardMonthlySpendCents * 12,
+      noiAnnualCents: annualRent - spend12,
       pricingMode: failsafe ? 'flat_fee' : 'yield_shared',
       dfr: s.dfr,
     }

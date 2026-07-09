@@ -25,13 +25,14 @@ export type Screen =
 export { defaultScreen } from './rbac'
 
 /** Public marketing routes + the gated app (Addendum F §4). */
-export type Route = 'home' | 'firm' | 'services' | 'insight' | 'contact' | 'access' | 'app'
+export type Route = 'home' | 'firm' | 'services' | 'insight' | 'pitch' | 'contact' | 'access' | 'app'
 
 const ROUTE_PATHS: Record<Route, string> = {
   home: '/',
   firm: '/firm',
   services: '/services',
   insight: '/insight',
+  pitch: '/pitch',
   contact: '/contact',
   access: '/access',
   app: '/app',
@@ -146,7 +147,12 @@ if (!bootSession && demoCleanBoot) {
 let bootRoute = routeFromPath(window.location.pathname)
 if (bootRoute === 'app' && !bootSession) bootRoute = 'access'
 if (demoCleanBoot && bootSession) bootRoute = 'app'
-window.history.replaceState(null, '', ROUTE_PATHS[bootRoute] + window.location.search)
+// Preserve the hash on boot — the deck deep-links as /pitch#N.
+window.history.replaceState(
+  null,
+  '',
+  ROUTE_PATHS[bootRoute] + window.location.search + window.location.hash,
+)
 
 applyTheme(initial.world, true)
 
@@ -237,7 +243,7 @@ export const useApp = create<AppState>((set, get) => {
     login: async (email, password) => {
       const viaApi = await loginViaApi(email, password)
       const credential = viaApi ?? findCredential(email, password)
-      if (!credential) return 'Unknown demo credential — use one of the sign-ins listed below.'
+      if (!credential) return 'Unknown credentials — use one of the sign-ins listed below.'
       const session: Session = {
         personaId: credential.personaId,
         role: credential.role,
