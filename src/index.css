@@ -123,16 +123,6 @@ body {
   --accent: #3f6b4a;
   background: #f6f2e9;
   color: #14202b;
-  transition: background-color 0.55s ease;
-}
-/* The ONE dark slide — a deliberate tonal shift. Vars flip so slide content
-   inherits the light-on-navy treatment without per-element overrides. */
-.deck.deck-dark {
-  --ink: #f3eee3;
-  --stone: #97a1ab;
-  --accent: #86ac90;
-  background: #14202b;
-  color: #f3eee3;
 }
 .deck-serif {
   font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;

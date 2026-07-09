@@ -1,40 +1,41 @@
-import { ReactNode, useCallback, useEffect, useRef, useState } from 'react'
-import { CountUp } from '../components'
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { create as createQr } from 'qrcode'
 import { PARTNER_BANK } from '../../config'
+import { deck } from '../../data/deckData'
 
 /**
- * The pitch deck (Addendum I, design language per the warm-institutional
- * direction): Kawasaki's ten slides — display-serif roman/italic headline
- * pairs, wide-caps kickers, ivory base with ONE dark slide (04), muted
- * green as the single accent, signature components (event-chain timeline,
- * 2×2 positioning plot, combo chart) as slide visuals. Every figure
- * reconciles to the business-model documents. Keyboard / swipe / chevrons
- * advance; slides deep-link as /pitch#N; Present goes fullscreen.
+ * The pitch deck — Build Brief v4 (supersedes all prior deck briefs).
+ * Eleven Kawasaki slides (status/ask split) plus a Q&A appendix, on a warm
+ * ivory canvas throughout. Display-serif roman/italic headline pairs,
+ * wide-caps kickers, muted green accent. EVERY figure renders from
+ * src/data/deckData.ts — no content literals in slide components. Fully
+ * legible as static frames (reveals are fade+rise only). Keyboard / swipe /
+ * chevrons advance; slides deep-link as /pitch#N (the appendix is #12).
  */
 
-const SLIDE_COUNT = 10
-const DARK_SLIDE = 3 // slide 04 — the one deliberate tonal shift
+const MAIN_COUNT = 11
+const TOTAL_COUNT = 12 // + appendix, reachable past the end
 
 export default function Pitch() {
   const [index, setIndex] = useState(() => {
     const n = Number(window.location.hash.replace('#', ''))
-    return Number.isInteger(n) && n >= 1 && n <= SLIDE_COUNT ? n - 1 : 0
+    return Number.isInteger(n) && n >= 1 && n <= TOTAL_COUNT ? n - 1 : 0
   })
   const containerRef = useRef<HTMLDivElement>(null)
   const touchX = useRef<number | null>(null)
 
   const go = useCallback((next: number) => {
-    setIndex(Math.max(0, Math.min(SLIDE_COUNT - 1, next)))
+    setIndex(Math.max(0, Math.min(TOTAL_COUNT - 1, next)))
   }, [])
 
-  // Deep links: /pitch#3 ↔ slide 3.
+  // Deep links: /pitch#3 ↔ slide 3; #12 is the appendix.
   useEffect(() => {
     window.history.replaceState(null, '', `${window.location.pathname}#${index + 1}`)
   }, [index])
   useEffect(() => {
     const onHash = () => {
       const n = Number(window.location.hash.replace('#', ''))
-      if (Number.isInteger(n) && n >= 1 && n <= SLIDE_COUNT) setIndex(n - 1)
+      if (Number.isInteger(n) && n >= 1 && n <= TOTAL_COUNT) setIndex(n - 1)
     }
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
@@ -51,7 +52,7 @@ export default function Pitch() {
         go(index - 1)
       }
       if (e.key === 'Home') go(0)
-      if (e.key === 'End') go(SLIDE_COUNT - 1)
+      if (e.key === 'End') go(MAIN_COUNT - 1)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -68,21 +69,23 @@ export default function Pitch() {
     <ProblemSlide key="s2" />,
     <ValueSlide key="s3" />,
     <MagicSlide key="s4" />,
-    <ModelSlide key="s5" active={index === 4} />,
+    <ModelSlide key="s5" />,
     <GtmSlide key="s6" />,
     <CompetitionSlide key="s7" />,
     <TeamSlide key="s8" />,
     <FinancialsSlide key="s9" />,
-    <AskSlide key="s10" />,
+    <StatusSlide key="s10" />,
+    <AskSlide key="s11" />,
+    <AppendixSlide key="s12" />,
   ]
 
-  const dark = index === DARK_SLIDE
+  const onAppendix = index >= MAIN_COUNT
 
   return (
     <div className="-mx-6 py-6">
       <div
         ref={containerRef}
-        className={`deck relative w-full select-none border-y rule ${dark ? 'deck-dark' : ''}`}
+        className="deck relative w-full select-none border-y rule"
         onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
         onTouchEnd={(e) => {
           if (touchX.current === null) return
@@ -98,7 +101,7 @@ export default function Pitch() {
           </div>
         </div>
 
-        {/* Chrome: chevrons, counter, progress rail, present */}
+        {/* Chrome: chevrons, counter, progress rail, present, appendix */}
         <button
           aria-label="Previous slide"
           onClick={() => go(index - 1)}
@@ -110,14 +113,14 @@ export default function Pitch() {
         <button
           aria-label="Next slide"
           onClick={() => go(index + 1)}
-          disabled={index === SLIDE_COUNT - 1}
+          disabled={index === TOTAL_COUNT - 1}
           className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-4 text-2xl text-[color:var(--stone)] transition-colors hover:text-[color:var(--ink)] disabled:opacity-20"
         >
           ›
         </button>
         <div className="absolute bottom-4 left-10 flex items-center gap-4 text-[11px] tracking-[0.14em] text-[color:var(--stone)]">
-          <span className="tabular-nums">
-            {String(index + 1).padStart(2, '0')} — {SLIDE_COUNT}
+          <span className="tabular-nums uppercase">
+            {onAppendix ? 'Appendix' : `${String(index + 1).padStart(2, '0')} — ${MAIN_COUNT}`}
           </span>
           <button
             onClick={present}
@@ -125,27 +128,29 @@ export default function Pitch() {
           >
             Present
           </button>
+          <button
+            onClick={() => go(MAIN_COUNT)}
+            className={`uppercase underline-offset-2 hover:text-[color:var(--ink)] hover:underline ${onAppendix ? 'text-[color:var(--ink)]' : ''}`}
+          >
+            Appendix
+          </button>
         </div>
-        {/* Progress rail */}
-        <div className={`absolute bottom-0 left-0 h-[2px] w-full ${dark ? 'bg-white/10' : 'bg-black/5'}`}>
+        {/* Progress rail (main deck only; full on the appendix) */}
+        <div className="absolute bottom-0 left-0 h-[2px] w-full bg-black/5">
           <div
             className="h-full bg-[color:var(--accent)] transition-all duration-500"
-            style={{ width: `${((index + 1) / SLIDE_COUNT) * 100}%` }}
+            style={{ width: `${((Math.min(index, MAIN_COUNT - 1) + 1) / MAIN_COUNT) * 100}%` }}
           />
         </div>
-        {/* Slide dots (clickable) */}
-        <div className="absolute bottom-4 right-10 flex gap-2">
-          {Array.from({ length: SLIDE_COUNT }, (_, i) => (
+        {/* Slide dots (clickable, main slides) */}
+        <div className="absolute bottom-4 right-10 flex items-center gap-2">
+          {Array.from({ length: MAIN_COUNT }, (_, i) => (
             <button
               key={i}
               aria-label={`Slide ${i + 1}`}
               onClick={() => go(i)}
               className={`h-1.5 w-1.5 rounded-full transition-colors ${
-                i === index
-                  ? 'bg-[color:var(--accent)]'
-                  : dark
-                    ? 'bg-white/20 hover:bg-white/40'
-                    : 'bg-black/15 hover:bg-black/30'
+                i === index ? 'bg-[color:var(--accent)]' : 'bg-black/15 hover:bg-black/30'
               }`}
             />
           ))}
@@ -179,7 +184,7 @@ function Kicker(props: { children: ReactNode }) {
 /** The house headline: first line roman, second line italic, each with a period. */
 function HeadlinePair(props: { roman: ReactNode; italic?: ReactNode; size?: string }) {
   return (
-    <h2 className={`deck-serif mt-3 ${props.size ?? 'text-6xl'} font-medium leading-[1.1] text-[color:var(--ink)]`}>
+    <h2 className={`deck-serif mt-3 ${props.size ?? 'text-5xl'} font-medium leading-[1.1] text-[color:var(--ink)]`}>
       {props.roman}
       {props.italic && (
         <>
@@ -191,8 +196,8 @@ function HeadlinePair(props: { roman: ReactNode; italic?: ReactNode; size?: stri
   )
 }
 
-function ArchLarge(props: { size?: number }) {
-  const s = props.size ?? 72
+function ArchMark(props: { size?: number }) {
+  const s = props.size ?? 56
   return (
     <svg width={s} height={s} viewBox="0 0 24 24" aria-hidden>
       <g stroke="var(--ink)" strokeWidth="1.1" fill="none">
@@ -204,13 +209,219 @@ function ArchLarge(props: { size?: number }) {
   )
 }
 
-/** Signature component: the event-chain timeline (a lease's life). */
+function Footnote(props: { children: ReactNode }) {
+  return <div className="mt-2 text-[10px] leading-relaxed text-[color:var(--stone)]">{props.children}</div>
+}
+
+/** €-formatting for figures coming out of deckData. */
+const eurInt = (n: number) => `€${n.toLocaleString('en-IE', { maximumFractionDigits: 0 })}`
+const eurDec = (n: number) =>
+  Number.isInteger(n) ? eurInt(n) : `€${n.toLocaleString('en-IE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const num = (n: number) => n.toLocaleString('en-IE')
+
+// ── 01 · Title ───────────────────────────────────────────────────────────────
+
+function TitleSlide() {
+  return (
+    <div className="flex min-h-[62vh] flex-col justify-end">
+      <Reveal order={0} className="absolute right-10 top-10">
+        <ArchMark />
+      </Reveal>
+      <Reveal order={1}>
+        <Kicker>The financial operating system for European rental real estate</Kicker>
+      </Reveal>
+      <Reveal order={2}>
+        <h1 className="deck-serif mt-4 text-9xl font-medium tracking-tight text-[color:var(--ink)]">
+          Keystone
+        </h1>
+      </Reveal>
+      <Reveal order={3}>
+        <div className="mt-8 h-px w-full bg-[color:var(--stone)] opacity-40" />
+        <div className="mt-5 flex items-baseline justify-between text-sm text-[color:var(--ink)]">
+          <span className="tracking-wide">{deck.founders.join(' · ')}</span>
+          <span className="flex items-baseline gap-6 text-[11px] uppercase tracking-[0.22em] text-[color:var(--stone)]">
+            <span>{deck.contactEmail}</span>
+            <span>{deck.year}</span>
+          </span>
+        </div>
+      </Reveal>
+    </div>
+  )
+}
+
+// ── 02 · Problem ─────────────────────────────────────────────────────────────
+
+function ProblemSlide() {
+  const consequences: [string, ReactNode][] = [
+    ['Hours lost', `${deck.problem.hoursPerUnit} on reconciliation, bookkeeping, filings.`],
+    [
+      'Money leaking',
+      `${deck.problem.missedIndexation}; overpaid taxes, utilities, insurance and vendor contracts go unnoticed year after year.`,
+    ],
+    [
+      'Cash frozen',
+      `every one of these tenancies carries a deposit and a reserve sitting at 0%. ${deck.market.deDepositPool}.`,
+    ],
+    ['Risk accumulating', `${deck.problem.disputeCost}; ${deck.problem.frPenalty}.`],
+  ]
+  return (
+    <div>
+      <Reveal order={0}>
+        <Kicker>The problem</Kicker>
+        <div className="mt-3 text-sm text-[color:var(--ink)]/80">
+          Meet {deck.persona.name} — {deck.persona.desc}.
+        </div>
+        <p className="mt-2 max-w-3xl text-[15px] leading-relaxed text-[color:var(--stone)]">
+          <span className="text-[color:var(--ink)]">Rental finance was never built as a system.</span>{' '}
+          Banks move money but don't understand rentals; property software tracks units but never
+          touches money. So {deck.persona.name} improvises: a personal account, a spreadsheet, a
+          shoebox of receipts.
+        </p>
+      </Reveal>
+      <Reveal order={1}>
+        <div className="deck-serif mt-6 text-5xl font-medium leading-[1.15] text-[color:var(--ink)]">
+          European tenants pay{' '}
+          <span className="text-[color:var(--accent)]">{deck.market.rentActual2022}</span> in rent
+          every year — and rising.
+        </div>
+        <div className="mt-2 text-sm text-[color:var(--stone)]">
+          growing {deck.market.rentHistGrowth} · projected {deck.market.rentProjected2026} by 2026
+        </div>
+        <Footnote>{deck.market.provenance}</Footnote>
+      </Reveal>
+      <Reveal order={2}>
+        <div className="mt-6 grid grid-cols-2 gap-x-12 gap-y-3">
+          {consequences.map(([title, line]) => (
+            <div key={title} className="flex gap-3 border-t border-[color:var(--stone)]/30 pt-2 text-[13px] leading-relaxed">
+              <span className="w-36 shrink-0 font-semibold text-[color:var(--ink)]">{title}</span>
+              <span className="text-[color:var(--stone)]">{line}</span>
+            </div>
+          ))}
+        </div>
+        <Footnote>
+          Hours and leakage figures: internal estimates from landlord interviews. Deposit-pool
+          figure: estimate. Statutory penalty and market figures: as reported.
+        </Footnote>
+      </Reveal>
+      <Reveal order={3}>
+        <p className="deck-serif mt-6 text-xl italic text-[color:var(--ink)]/85">
+          Millions of European landlords run a regulated financial business with no system built
+          for it.
+        </p>
+      </Reveal>
+    </div>
+  )
+}
+
+// ── 03 · Value proposition ───────────────────────────────────────────────────
+
+/**
+ * Renders deck.valueProp VERBATIM, split across three visual lines with the
+ * key phrases weighted — the string itself is untouched.
+ */
+function WeightedValueProp() {
+  const text = deck.valueProp
+  const emphases = ['full financial life', 'one intelligent account', 'compliant by construction']
+  const breaks = ['of their portfolio ', 'one intelligent account — ']
+  // Insert visual line breaks after the break anchors, then bold the emphases.
+  const lines = useMemo(() => {
+    let rest = text
+    const out: string[] = []
+    for (const anchor of breaks) {
+      const at = rest.indexOf(anchor)
+      if (at === -1) return [text]
+      out.push(rest.slice(0, at + anchor.length))
+      rest = rest.slice(at + anchor.length)
+    }
+    out.push(rest)
+    return out
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text])
+
+  const renderLine = (line: string) => {
+    let segments: { text: string; bold: boolean }[] = [{ text: line, bold: false }]
+    for (const phrase of emphases) {
+      segments = segments.flatMap((seg) => {
+        if (seg.bold) return [seg]
+        const at = seg.text.toLowerCase().indexOf(phrase.toLowerCase())
+        if (at === -1) return [seg]
+        return [
+          { text: seg.text.slice(0, at), bold: false },
+          { text: seg.text.slice(at, at + phrase.length), bold: true },
+          { text: seg.text.slice(at + phrase.length), bold: false },
+        ]
+      })
+    }
+    return segments.map((seg, i) =>
+      seg.bold ? (
+        <strong key={i} className="font-semibold text-[color:var(--ink)]">
+          {seg.text}
+        </strong>
+      ) : (
+        <span key={i}>{seg.text}</span>
+      ),
+    )
+  }
+
+  return (
+    <div className="deck-serif max-w-4xl text-4xl font-normal leading-[1.5] text-[color:var(--ink)]/75">
+      {lines.map((line, i) => (
+        <div key={i}>{renderLine(line)}</div>
+      ))}
+    </div>
+  )
+}
+
+function ValueSlide() {
+  return (
+    <div>
+      <Reveal order={0}>
+        <Kicker>Value proposition</Kicker>
+      </Reveal>
+      <Reveal order={1}>
+        <div className="mt-6">
+          <WeightedValueProp />
+        </div>
+      </Reveal>
+      <Reveal order={2}>
+        <div className="mt-10 border-t border-[color:var(--stone)]/30 pt-4">
+          <div className="flex flex-wrap items-baseline gap-3 text-[13px] text-[color:var(--stone)]">
+            <span>personal account · spreadsheet · manual filings</span>
+            <span className="text-[color:var(--ink)]">→</span>
+            <span className="font-medium text-[color:var(--accent)]">one Keystone account</span>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-x-8 gap-y-1 text-[12px] leading-relaxed text-[color:var(--stone)]">
+            <span>
+              <span className="font-semibold text-[color:var(--ink)]">1</span> Connect the
+              portfolio — rent-roll import, a data migration, not a sales cycle
+            </span>
+            <span>
+              <span className="font-semibold text-[color:var(--ink)]">2</span> Rails switch over —
+              per-lease account, self-reconciling
+            </span>
+            <span>
+              <span className="font-semibold text-[color:var(--ink)]">3</span> The system takes
+              over — books, deadlines, cost-detection, treasury
+            </span>
+          </div>
+          <div className="mt-3 text-[12px] text-[color:var(--ink)]/70">
+            fewer hours · lower costs · books tax-ready · deposits handled correctly · idle cash
+            earning
+          </div>
+        </div>
+      </Reveal>
+    </div>
+  )
+}
+
+// ── 04 · Underlying magic ────────────────────────────────────────────────────
+
 const LEASE_CHAIN: [string, string, string][] = [
   ['T+0', 'Lease signed', 'AI reads the document; rules encode the regime.'],
-  ['T+1', 'Virtual IBAN', 'Per-lease collection; deposit segregated at the partner bank.'],
-  ['M+1', 'Rent cleared', 'SEPA settles; the books post themselves, double-entry.'],
-  ['M+6', 'Yield accrued', 'Idle balances earn; the owner keeps ~60% of every basis point.'],
-  ['EXIT', 'Deposit returned', 'The statutory clock runs; the ledger closes to the cent.'],
+  ['T+1', 'Virtual account', 'Per-lease collection; deposit segregated at the partner bank.'],
+  ['M+1', 'Rent cleared', 'Collection settles; the books post themselves, double-entry.'],
+  ['M+6', 'Yield accrued', 'Idle balances earn at the policy rate.'],
+  ['EXIT', 'Deposit returned', 'The statutory clock is met; the ledger closes to the cent.'],
 ]
 
 function EventChain() {
@@ -235,152 +446,6 @@ function EventChain() {
   )
 }
 
-// ── 01 · Title ───────────────────────────────────────────────────────────────
-
-function TitleSlide() {
-  return (
-    <div className="flex min-h-[62vh] flex-col justify-end">
-      <Reveal order={0} className="absolute right-10 top-10">
-        <ArchLarge size={56} />
-      </Reveal>
-      <Reveal order={1}>
-        <Kicker>The financial operating system for European rental real estate</Kicker>
-      </Reveal>
-      <Reveal order={2}>
-        <h1 className="deck-serif mt-4 text-9xl font-medium tracking-tight text-[color:var(--ink)]">
-          Keystone
-        </h1>
-      </Reveal>
-      <Reveal order={3}>
-        <div className="mt-8 h-px w-full bg-[color:var(--stone)] opacity-40" />
-        <div className="mt-5 flex items-baseline justify-between text-sm text-[color:var(--ink)]">
-          <span className="tracking-wide">
-            Leon Ban · Duong Bui · Mark Gebrane · Badriah Al-Besharah
-          </span>
-          <span className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--stone)]">
-            HEC Startup Competition · 2026
-          </span>
-        </div>
-      </Reveal>
-    </div>
-  )
-}
-
-// ── 02 · Problem / Opportunity ───────────────────────────────────────────────
-
-const REGIME_RULES: [string, string][] = [
-  ['FR', 'cap 1 month · 10%/mo late penalty'],
-  ['NL', 'cap 2 months · 14-day return'],
-  ['ES', 'fianza lodged with the region'],
-  ['DE', '3× cold rent · tenant interest'],
-  ['AT', 'separate secure holding'],
-  ['IT', 'cap 3 months · legal-rate interest'],
-]
-
-function ProblemSlide() {
-  return (
-    <div>
-      <Reveal order={0}>
-        <Kicker>The problem</Kicker>
-        <HeadlinePair roman="A regulated business." italic="Run on spreadsheets." />
-      </Reveal>
-      <div className="mt-10 grid grid-cols-2 gap-14">
-        <Reveal order={1}>
-          <p className="text-[15px] leading-relaxed text-[color:var(--ink)]/80">
-            Rent lands in a personal account. Deposits sit frozen at 0% — held six different
-            ways in six countries. At tax time it becomes a spreadsheet; one missed deadline is
-            a fine or a lost deposit. For the people who house Europe, the finances of housing
-            are still handmade.
-          </p>
-          <div className="mt-6 divide-y divide-[color:var(--stone)]/30 border-y border-[color:var(--stone)]/30">
-            {REGIME_RULES.map(([code, rule]) => (
-              <div key={code} className="flex items-baseline gap-4 py-2 text-[13px]">
-                <span className="deck-serif w-8 text-lg font-medium text-[color:var(--ink)]">{code}</span>
-                <span className="text-[color:var(--stone)]">{rule}</span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-3 text-[11px] uppercase tracking-[0.14em] text-[color:var(--stone)]">
-            The inconsistency is the argument
-          </div>
-        </Reveal>
-        <Reveal order={2} className="self-center border-l border-[color:var(--stone)]/40 pl-14">
-          <div className="deck-serif text-7xl font-medium text-[color:var(--accent)]">&gt;€1 trillion</div>
-          <div className="mt-2 text-sm uppercase tracking-[0.14em] text-[color:var(--stone)]">
-            of rent flows through Europe every year
-          </div>
-          <div className="deck-serif mt-10 text-5xl font-medium text-[color:var(--ink)]">~25%</div>
-          <div className="mt-2 text-sm uppercase tracking-[0.14em] text-[color:var(--stone)]">
-            sits idle at any moment — deposits & reserves
-          </div>
-        </Reveal>
-      </div>
-    </div>
-  )
-}
-
-// ── 03 · Value Proposition ───────────────────────────────────────────────────
-
-function ValueSlide() {
-  return (
-    <div>
-      <Reveal order={0}>
-        <Kicker>The answer</Kicker>
-        <HeadlinePair roman="One account." italic="Legal by construction." />
-      </Reveal>
-      <div className="mt-12 grid grid-cols-[1fr_80px_1fr] items-center gap-0">
-        <Reveal order={1}>
-          <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">Before</div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {['Bank account', 'Spreadsheet', 'Agency filing', 'Tenant chase', 'Vendor invoices', 'Deposit paperwork'].map(
-              (item, i) => (
-                <span
-                  key={item}
-                  className="border border-[color:var(--stone)]/50 px-3 py-2 text-[13px] text-[color:var(--stone)]"
-                  style={{ transform: `rotate(${[-1.4, 1.1, -0.7, 1.6, -1.1, 0.8][i]}deg)` }}
-                >
-                  {item}
-                </span>
-              ),
-            )}
-          </div>
-          <p className="mt-5 text-[13px] leading-relaxed text-[color:var(--stone)]">
-            Disconnected tools, none of which know what a lease is — reconciled by hand, at
-            night, at tax time.
-          </p>
-        </Reveal>
-        <Reveal order={2} className="text-center text-2xl text-[color:var(--stone)]">
-          →
-        </Reveal>
-        <Reveal order={3}>
-          <div className="border border-[color:var(--accent)] p-6">
-            <div className="deck-serif text-2xl font-medium text-[color:var(--accent)]">Keystone</div>
-            <div className="mt-4 divide-y divide-[color:var(--stone)]/25">
-              {[
-                ['Rent', 'collects itself, dunning included'],
-                ['Deposit', 'held per statute, automatically'],
-                ['Yield', 'idle cash earns — owners keep ~60%'],
-                ['Books', 'double-entry, to the cent'],
-                ['Savings', 'five detectors, success-fee only'],
-              ].map(([label, line]) => (
-                <div key={label} className="flex items-baseline gap-3 py-2 text-[13px]">
-                  <span className="w-16 shrink-0 text-[11px] uppercase tracking-[0.14em] text-[color:var(--ink)]">
-                    {label}
-                  </span>
-                  <span className="text-[color:var(--stone)]">{line}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <p className="mt-4 text-[13px] italic text-[color:var(--stone)]">The relief of simplicity.</p>
-        </Reveal>
-      </div>
-    </div>
-  )
-}
-
-// ── 04 · Underlying Magic — the ONE dark slide ───────────────────────────────
-
 function MagicSlide() {
   return (
     <div>
@@ -388,11 +453,11 @@ function MagicSlide() {
         <Kicker>How it works</Kicker>
         <HeadlinePair roman="Deterministic core." italic="Probabilistic edges." />
       </Reveal>
-      <div className="mt-12 grid grid-cols-[1.2fr_1fr] gap-16">
+      <div className="mt-10 grid grid-cols-[1.2fr_1fr] gap-16">
         <Reveal order={1}>
           <div className="space-y-0">
             {[
-              ['Compliance engine', 'Six statutory regimes as versioned rules — caps, clocks, lodgement, interest. Ours.'],
+              ['Compliance engine', 'European statutory regimes as versioned rules-as-code — caps, clocks, lodgement, interest. Ours; the moat.'],
               ['EMI / escrow rail', 'A regulated escrow layer moves every euro. Rented, not built.'],
               [`${PARTNER_BANK.short} vault`, 'Client funds segregated, DGS-protected, insolvency-remote at the partner bank.'],
             ].map(([title, line], i) => (
@@ -407,12 +472,12 @@ function MagicSlide() {
             beside the flow — money never touches our balance sheet.
           </div>
           <p className="mt-6 border-t border-[color:var(--stone)]/30 pt-4 text-[15px] text-[color:var(--stone)]">
-            Rules decide. <span className="text-[color:var(--ink)]">AI only reads documents.</span>
+            Deterministic core — <span className="text-[color:var(--ink)]">rules decide, AI only reads documents.</span>
           </p>
         </Reveal>
         <Reveal order={2}>
           <div className="text-[10px] uppercase tracking-[0.14em] text-[color:var(--stone)]">
-            A lease, event by event
+            One lease, event by event
           </div>
           <div className="mt-4">
             <EventChain />
@@ -423,63 +488,65 @@ function MagicSlide() {
   )
 }
 
-// ── 05 · Business Model ──────────────────────────────────────────────────────
+// ── 05 · Business model ──────────────────────────────────────────────────────
 
-const REVENUE_LINES = [
-  'SaaS subscription per unit',
-  'Treasury yield share',
-  'Deposit custody',
-  'Card interchange',
-  'Savings success fees',
-  'Bookkeeping & documents',
-  'Partner & platform revenue share',
-]
-
-function ModelSlide(props: { active: boolean }) {
+function ModelSlide() {
+  const streams: [string, string][] = [
+    ['SaaS subscription — the core', eurInt(deck.revenue.saas)],
+    ['Savings engine success fee — 25% of documented first-year savings', eurDec(deck.revenue.savingsFee)],
+    ['NIM share — 27% of yield on idle balances (the only rate-linked line)', eurInt(deck.revenue.nim)],
+    ['Card interchange', eurInt(deck.revenue.interchange)],
+    ['Deposit custody & guarantee', eurInt(deck.revenue.custody)],
+    ['Premium compliance tier — lodgement-market workflows', '—'],
+    ['Supplier network / embedded finance', 'later'],
+  ]
   return (
     <div>
       <Reveal order={0}>
         <Kicker>Business model</Kicker>
-        <div className="deck-serif mt-3 text-8xl font-medium text-[color:var(--accent)]">
-          {props.active ? <CountUp value={225} format={(v) => `€${Math.round(v)}`} /> : '€225'}
-          <span className="deck-serif text-4xl italic text-[color:var(--stone)]"> per unit. Per year.</span>
-        </div>
+        <HeadlinePair
+          roman={
+            <>
+              {eurInt(deck.revenue.fullStackPerUnit)} per unit.{' '}
+            </>
+          }
+          italic="Per year, full stack."
+        />
       </Reveal>
-      <div className="mt-10 grid grid-cols-2 gap-14">
+      <div className="mt-8 grid grid-cols-[1.25fr_1fr] gap-14">
         <Reveal order={1}>
           <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">
-            Seven revenue lines
+            Seven revenue streams — per unit / yr
           </div>
-          <ul className="mt-3 space-y-2 text-[15px] text-[color:var(--ink)]/85">
-            {REVENUE_LINES.map((line) => (
-              <li key={line}>· {line}</li>
+          <div className="mt-3 divide-y divide-[color:var(--stone)]/25 border-y border-[color:var(--stone)]/25">
+            {streams.map(([label, value]) => (
+              <div key={label} className="flex items-baseline justify-between gap-6 py-2 text-[13px]">
+                <span className="text-[color:var(--ink)]/85">{label}</span>
+                <span className="shrink-0 tabular-nums font-medium text-[color:var(--ink)]">{value}</span>
+              </div>
             ))}
-          </ul>
-          <div className="mt-5 text-[13px] text-[color:var(--stone)]">
-            Core unit revenue ≈ €172 — of which ~€96 durable, rate-independent.
+          </div>
+          <div className="mt-3 text-[13px] text-[color:var(--stone)]">
+            {deck.revenue.rateIndependentShare} of revenue is rate-independent.
           </div>
         </Reveal>
         <Reveal order={2}>
           <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">
-            Per €100 of yield on idle balances
+            Pricing by client
           </div>
-          <div className="mt-4 flex h-11 w-full overflow-hidden border border-[color:var(--stone)]/40">
-            <div className="flex items-center justify-center bg-[color:var(--ink)] text-[13px] text-[#f6f2e9]" style={{ width: '60%' }}>
-              Owner 60
-            </div>
-            <div className="flex items-center justify-center bg-[color:var(--accent)] text-[13px] text-[#f6f2e9]" style={{ width: '27%' }}>
-              Keystone 27
-            </div>
-            <div className="flex items-center justify-center bg-[color:var(--stone)] text-[13px] text-[#f6f2e9]" style={{ width: '13%' }}>
-              Bank 13
-            </div>
+          <div className="mt-3 divide-y divide-[color:var(--stone)]/25 border-y border-[color:var(--stone)]/25">
+            {deck.pricing.map((p) => (
+              <div key={p.segment} className="flex items-baseline justify-between gap-4 py-2 text-[13px]">
+                <span className="text-[color:var(--ink)]/85">{p.segment}</span>
+                <span className="shrink-0 text-[color:var(--stone)]">
+                  {p.plan} · <span className="tabular-nums font-medium text-[color:var(--ink)]">{eurInt(p.eurPerUnitMo)}</span>/unit/mo
+                </span>
+              </div>
+            ))}
           </div>
           <p className="mt-4 text-[13px] leading-relaxed text-[color:var(--stone)]">
-            A three-way collar: owners keep ~60% of every basis point — the yield pays for the
-            software, and the account gets stickier as rates move.
-          </p>
-          <p className="mt-4 border-t border-[color:var(--stone)]/30 pt-3 text-[13px] text-[color:var(--ink)]/80">
-            ~Two-thirds of revenue is rate-independent — the floor holds when rates fall.
+            Who pays: the owner or operator. What for: the account that runs everything. How it
+            scales: per unit, priced to the segment.
           </p>
         </Reveal>
       </div>
@@ -487,26 +554,25 @@ function ModelSlide(props: { active: boolean }) {
   )
 }
 
-// ── 06 · Go-to-Market ────────────────────────────────────────────────────────
+// ── 06 · Go-to-market ────────────────────────────────────────────────────────
 
 function GtmSlide() {
   return (
     <div>
       <Reveal order={0}>
         <Kicker>Go-to-market</Kicker>
-        <HeadlinePair roman="Clean-yield markets first." italic="Enterprise scales it." />
+        <HeadlinePair roman="Owner-yield markets first." italic="Partnerships scale it." />
       </Reveal>
       <Reveal order={1}>
         <div className="mt-12 flex items-center gap-0">
           {[
-            ['Phase 1', 'FR · NL · ES', 'deposit float investable, compliance pain acute'],
-            ['Phase 2', 'PL · PT', 'high rental growth, fragmented tooling'],
-            ['Phase 3', 'DE · AT · IT', 'the big pool — engine already speaks §551 BGB'],
-          ].map(([phase, markets, line], i) => (
-            <div key={String(phase)} className="flex flex-1 items-center">
-              {i > 0 && <span className="px-3 text-[color:var(--stone)]">→</span>}
+            ['First', 'France · Netherlands · Spain', 'deposit float investable, compliance pain acute'],
+            ['Then', 'Expansion across Europe', 'the engine speaks each market’s statute before the sales team arrives'],
+          ].map(([when, markets, line], i) => (
+            <div key={String(when)} className="flex flex-1 items-center">
+              {i > 0 && <span className="px-4 text-[color:var(--stone)]">→</span>}
               <div className="flex-1 border-t border-[color:var(--ink)] pt-3">
-                <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--accent)]">{phase}</div>
+                <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--accent)]">{when}</div>
                 <div className="deck-serif mt-1 text-3xl text-[color:var(--ink)]">{markets}</div>
                 <div className="mt-1 text-[13px] leading-relaxed text-[color:var(--stone)]">{line}</div>
               </div>
@@ -517,10 +583,10 @@ function GtmSlide() {
       <Reveal order={2}>
         <div className="mt-14 flex divide-x divide-[color:var(--stone)]/30 border-y border-[color:var(--stone)]/30 text-[13px]">
           {[
-            ['Letting agents', 'the trusted local channel'],
-            ['Property managers', '850 units per contract'],
-            ['Software integrations', 'embedded as the financial layer'],
-            ['Partner-bank channel', 'the bank refers its landlords'],
+            ['Property managers', 'hundreds of units per contract'],
+            ['Landlord-software integrations', 'embedded as the financial layer'],
+            ['Landlord associations', 'the trusted route to owners'],
+            ['Partner-bank SME channel', 'the bank refers its landlords'],
           ].map(([channel, line]) => (
             <div key={channel} className="flex-1 px-4 py-3">
               <div className="font-medium text-[color:var(--ink)]">{channel}</div>
@@ -530,7 +596,7 @@ function GtmSlide() {
         </div>
         <p className="mt-6 text-[15px] text-[color:var(--stone)]">
           One partnership → <span className="text-[color:var(--ink)]">thousands of units</span>.
-          Distribution over door-knocking.
+          Units arrive by contract, not one-by-one.
         </p>
       </Reveal>
     </div>
@@ -557,11 +623,11 @@ function CompetitionSlide() {
             <text x="48" y="26" fontSize="11" fill="var(--stone)" transform="rotate(-90 48 26)" textAnchor="end">moves & grows money →</text>
             <text x="48" y="300" fontSize="11" fill="var(--stone)" transform="rotate(-90 48 300)">software only</text>
             {[
-              [120, 268, 'PMS software'],
-              [95, 175, 'Bank accounts'],
+              [120, 268, 'Property-management SaaS'],
+              [95, 175, 'Bank business accounts'],
               [160, 235, 'National deposit schemes'],
               [225, 255, 'Deposit-replacement insurers'],
-              [180, 85, 'Goldbridge (US)'],
+              [180, 85, 'Goldbridge / US peers'],
             ].map(([x, y, label]) => (
               <g key={String(label)}>
                 <circle cx={Number(x)} cy={Number(y)} r="4" fill="var(--stone)" />
@@ -576,11 +642,11 @@ function CompetitionSlide() {
         </Reveal>
         <Reveal order={2} className="self-center text-[13px] leading-relaxed">
           <ul className="space-y-3 text-[color:var(--ink)]/80">
-            <li><span className="font-medium text-[color:var(--ink)]">PMS software</span> — manages the property, never the money.</li>
-            <li><span className="font-medium text-[color:var(--ink)]">Bank accounts</span> — money, one country, no idea what a lease is.</li>
-            <li><span className="font-medium text-[color:var(--ink)]">National deposit schemes</span> — hold-only, one regime each, no yield.</li>
-            <li><span className="font-medium text-[color:var(--ink)]">Deposit-replacement insurers</span> — tenant-side product, no account.</li>
-            <li><span className="font-medium text-[color:var(--ink)]">Goldbridge (US)</span> — validates the thesis; no European engine.</li>
+            <li><span className="font-medium text-[color:var(--ink)]">Property-management SaaS</span> — no money movement.</li>
+            <li><span className="font-medium text-[color:var(--ink)]">Bank business accounts</span> — no rental compliance.</li>
+            <li><span className="font-medium text-[color:var(--ink)]">National deposit schemes</span> — hold-only.</li>
+            <li><span className="font-medium text-[color:var(--ink)]">Deposit-replacement insurers</span> — tenant-side product.</li>
+            <li><span className="font-medium text-[color:var(--ink)]">Goldbridge / US peers</span> — validates the thesis; no European compliance engine.</li>
           </ul>
         </Reveal>
       </div>
@@ -590,12 +656,16 @@ function CompetitionSlide() {
 
 // ── 08 · Team ────────────────────────────────────────────────────────────────
 
-const FOUNDERS: [string, string][] = [
-  ['Leon Ban', 'Product & engineering — built the compliance engine and ledger'],
-  ['Duong Bui', 'Finance & treasury — the yield model and unit economics'],
-  ['Mark Gebrane', 'Growth & partnerships — channels, agents, platforms'],
-  ['Badriah Al-Besharah', 'Regulatory & operations — the licence ladder, KYC/AML'],
-]
+function PhotoPlaceholder() {
+  return (
+    <div className="flex aspect-[4/5] w-full items-center justify-center border border-[color:var(--stone)]/50 bg-[color:var(--stone)]/10">
+      <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden fill="none" stroke="var(--stone)" strokeWidth="1.2">
+        <circle cx="12" cy="9" r="3.4" />
+        <path d="M5 20 a7 7 0 0 1 14 0" />
+      </svg>
+    </div>
+  )
+}
 
 function TeamSlide() {
   return (
@@ -604,20 +674,21 @@ function TeamSlide() {
         <Kicker>Team</Kicker>
         <HeadlinePair roman="Keystone." />
       </Reveal>
-      <div className="mt-12 grid grid-cols-2 gap-x-14 gap-y-10">
-        {FOUNDERS.map(([name, line], i) => (
-          <Reveal key={name} order={i + 1}>
-            <div className="border-t border-[color:var(--stone)]/40 pt-4">
-              <div className="deck-serif text-3xl text-[color:var(--ink)]">{name}</div>
-              <div className="mt-2 text-[13px] leading-relaxed text-[color:var(--stone)]">{line}</div>
+      <div className="mt-10 grid grid-cols-4 gap-8">
+        {deck.team.map((member, i) => (
+          <Reveal key={member.name} order={i + 1}>
+            <PhotoPlaceholder />
+            <div className="deck-serif mt-3 text-xl leading-tight text-[color:var(--ink)]">{member.name}</div>
+            <div className="mt-1 text-[11px] uppercase tracking-[0.14em] text-[color:var(--stone)]">
+              {member.role}
             </div>
+            <div className="mt-2 text-[12px] leading-relaxed text-[color:var(--stone)]">{member.line}</div>
           </Reveal>
         ))}
       </div>
       <Reveal order={5}>
-        <p className="deck-serif mt-12 text-xl italic text-[color:var(--stone)]">
-          Investors back people. Housing is where Europeans keep their money and their lives —
-          it deserves infrastructure built with the same care.
+        <p className="deck-serif mt-10 text-xl italic text-[color:var(--stone)]">
+          Investors back people.
         </p>
       </Reveal>
     </div>
@@ -626,156 +697,367 @@ function TeamSlide() {
 
 // ── 09 · Financials ──────────────────────────────────────────────────────────
 
-const PER_UNIT: [string, number][] = [
-  ['Small landlord', 177],
-  ['Mid landlord', 249],
-  ['Property manager', 203],
-  ['Housing assoc.', 124],
-  ['Institutional BTR', 264],
-]
-
-/** Signature component: revenue bars (ink) + EBITDA-margin line (green). */
-function ComboChart() {
-  // Two clean bands: bars live below y≈110, the margin line above — no label
-  // ever collides. Bar heights on a sqrt scale so €4.5M is still legible
-  // beside €239M; margin line on its own 0–55% scale.
-  const points: { x: number; label: string; revenue: string; margin: string; barH: number; marginY: number }[] = [
-    { x: 110, label: 'Seed', revenue: '€4.5M', margin: 'breakeven', barH: 20, marginY: 145 },
-    { x: 260, label: 'Series A', revenue: '€21.4M', margin: '24%', barH: 43, marginY: 95 },
-    { x: 410, label: 'Scale', revenue: '€239M', margin: '48%', barH: 140, marginY: 45 },
-  ]
+/**
+ * Revenue bars (ink) + EBITDA-margin line (accent), direct-labeled. The
+ * margin axis renders negatives (fixed −50…+30 range, dashed zero line); Y1
+ * has no margin and is explicitly labeled with its note instead.
+ */
+function ForecastChart() {
+  const base = 268 // bar baseline
+  const marginY = (pct: number) => 58 + (30 - pct) * 2.4 // +30% → 58 · 0% → 130 · −50% → 250
+  const barH = (revM: number) => Math.max(6, Math.sqrt(revM) * 26)
+  const cols = deck.forecast.map((f, i) => ({ ...f, x: 96 + i * 108 }))
+  const linePts = cols.filter((c) => c.ebitdaPct !== null)
   return (
-    <svg viewBox="0 0 520 290" className="w-full">
-      <line x1="40" y1="250" x2="490" y2="250" stroke="var(--ink)" strokeWidth="1" />
-      {points.map((p) => (
-        <g key={p.label}>
-          <rect x={p.x - 34} y={250 - p.barH} width="68" height={p.barH} fill="var(--ink)" opacity="0.85" />
-          <text x={p.x} y={250 - p.barH - 10} textAnchor="middle" fontSize="16" fill="var(--ink)" fontWeight="600">
-            {p.revenue}
+    <svg viewBox="0 0 600 330" className="w-full">
+      <line x1="40" y1={base} x2="580" y2={base} stroke="var(--ink)" strokeWidth="1" />
+      {/* dashed zero-margin line */}
+      <line x1="40" y1={marginY(0)} x2="580" y2={marginY(0)} stroke="var(--accent)" strokeWidth="0.6" strokeDasharray="3 5" opacity="0.6" />
+      <text x="42" y={marginY(0) - 5} fontSize="9" fill="var(--accent)" letterSpacing="1">
+        0% EBITDA
+      </text>
+      <text x="40" y="46" fontSize="10" fill="var(--accent)" letterSpacing="1.5">
+        EBITDA MARGIN
+      </text>
+      {cols.map((c) => {
+        const barTop = base - barH(c.revM)
+        const dotY = c.ebitdaPct === null ? null : marginY(c.ebitdaPct)
+        // If the margin dot crowds the bar top, lift the value label above both.
+        const labelY = dotY !== null && Math.abs(barTop - dotY) < 20 ? Math.min(barTop, dotY) - 12 : barTop - 8
+        return (
+        <g key={c.yr}>
+          <rect x={c.x - 26} y={barTop} width="52" height={barH(c.revM)} fill="var(--ink)" opacity="0.85" />
+          <text x={c.x} y={labelY} textAnchor="middle" fontSize="14" fill="var(--ink)" fontWeight="600">
+            €{c.revM}M
           </text>
-          <text x={p.x} y="270" textAnchor="middle" fontSize="11" fill="var(--stone)" letterSpacing="1.5">
-            {p.label.toUpperCase()}
+          <text x={c.x} y={base + 20} textAnchor="middle" fontSize="10" fill="var(--stone)" letterSpacing="1">
+            {c.yr.toUpperCase()}
           </text>
+          <text x={c.x} y={base + 34} textAnchor="middle" fontSize="9" fill="var(--stone)">
+            {num(c.units)} units
+          </text>
+          {c.note && (
+            <text x={c.x} y={base + 48} textAnchor="middle" fontSize="9" fill="var(--accent)" fontStyle="italic">
+              {c.note}
+            </text>
+          )}
         </g>
-      ))}
+        )
+      })}
       <polyline
-        points={points.map((p) => `${p.x},${p.marginY}`).join(' ')}
+        points={linePts.map((c) => `${c.x},${marginY(c.ebitdaPct as number)}`).join(' ')}
         fill="none"
         stroke="var(--accent)"
         strokeWidth="2"
       />
-      {points.map((p) => (
-        <g key={`m-${p.label}`}>
-          <circle cx={p.x} cy={p.marginY} r="4" fill="var(--accent)" />
-          <text x={p.x} y={p.marginY - 12} textAnchor="middle" fontSize="12" fill="var(--accent)" fontWeight="600">
-            {p.margin}
+      {linePts.map((c) => (
+        <g key={`m-${c.yr}`}>
+          <circle cx={c.x} cy={marginY(c.ebitdaPct as number)} r="4" fill="var(--accent)" />
+          <text
+            x={(c.ebitdaPct as number) < 0 ? c.x + 12 : c.x}
+            y={marginY(c.ebitdaPct as number) + ((c.ebitdaPct as number) < 0 ? 4 : -10)}
+            textAnchor={(c.ebitdaPct as number) < 0 ? 'start' : 'middle'}
+            fontSize="11"
+            fill="var(--accent)"
+            fontWeight="600"
+          >
+            {(c.ebitdaPct as number) > 0 ? '+' : ''}
+            {c.ebitdaPct}%
           </text>
         </g>
       ))}
-      <text x="40" y="52" fontSize="10" fill="var(--accent)" letterSpacing="1.5">
-        EBITDA MARGIN
-      </text>
     </svg>
   )
 }
 
 function FinancialsSlide() {
+  const roi = deck.landlordROI
   return (
     <div>
       <Reveal order={0}>
         <Kicker>Financials</Kicker>
-        <HeadlinePair roman="Software margins." italic="On fintech revenue." />
+        <HeadlinePair roman="Software margins." italic="On fintech revenue." size="text-4xl" />
       </Reveal>
-      <div className="mt-8 grid grid-cols-[1.15fr_1fr] gap-14">
+      <div className="mt-6 grid grid-cols-[1.3fr_1fr] gap-12">
         <Reveal order={1}>
-          <ComboChart />
+          <ForecastChart />
+          <div className="mt-1 text-[11px] leading-relaxed text-[color:var(--stone)]">
+            Growth via enterprise & partnership onboarding — units per contract, not one-by-one
+            sales; revenue/unit rises {deck.kpis.revPerUnitPath} as card + savings adoption
+            climbs.
+          </div>
         </Reveal>
         <Reveal order={2} className="self-center">
           <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">
-            Revenue per unit per year, by client type
+            {deck.persona.name} profits too — per unit / yr
           </div>
-          <div className="mt-4 divide-y divide-[color:var(--stone)]/25 border-y border-[color:var(--stone)]/25">
-            {PER_UNIT.map(([label, value]) => (
-              <div key={label} className="flex items-baseline justify-between py-2 text-[14px]">
-                <span className="text-[color:var(--ink)]/80">{label}</span>
-                <span className="tabular-nums font-medium text-[color:var(--ink)]">€{value}</span>
-              </div>
-            ))}
+          <div className="mt-3 divide-y divide-[color:var(--stone)]/25 border-y border-[color:var(--stone)]/25 text-[13px]">
+            <div className="flex justify-between py-2">
+              <span className="text-[color:var(--ink)]/85">Yield kept</span>
+              <span className="tabular-nums">{eurInt(roi.parts.yieldKept)}</span>
+            </div>
+            <div className="flex justify-between py-2">
+              <span className="text-[color:var(--ink)]/85">Software & accounting replaced</span>
+              <span className="tabular-nums">{eurInt(roi.parts.softwareReplaced)}</span>
+            </div>
+            <div className="flex justify-between py-2">
+              <span className="text-[color:var(--ink)]/85">Operating savings kept (75% of findings)</span>
+              <span className="tabular-nums">{eurInt(roi.parts.savingsKept)}</span>
+            </div>
+            <div className="flex justify-between py-2 font-medium text-[color:var(--ink)]">
+              <span>Value received ≈ {eurInt(roi.value)} vs fees ≈ {eurInt(roi.fees)}</span>
+              <span className="text-[color:var(--accent)]">{roi.cover} cover</span>
+            </div>
           </div>
-          <div className="mt-4 text-[13px] text-[color:var(--stone)]">
-            Blended ≈ €225 across the mix — the same model the product reconciles against.
-          </div>
+          <p className="mt-3 text-[12px] leading-relaxed text-[color:var(--stone)]">
+            The savings engine alone typically covers the subscription — we only earn when the
+            landlord saves.
+          </p>
         </Reveal>
       </div>
       <Reveal order={3}>
-        <div className="mt-6 text-xs text-[color:var(--stone)]">
-          Steady-state at each milestone, not cumulative · ECB deposit facility 2.25% · growth
-          carried by units under management and per-unit adoption, not price.
+        <div className="mt-4 flex flex-wrap gap-x-8 gap-y-1 border-t border-[color:var(--stone)]/30 pt-3 text-[12px] text-[color:var(--stone)]">
+          <span>balances under management Y5 <span className="text-[color:var(--ink)]">{deck.kpis.balancesY5}</span></span>
+          <span>revenue/unit <span className="text-[color:var(--ink)]">{deck.kpis.revPerUnitPath}</span></span>
+          <span>gross margin <span className="text-[color:var(--ink)]">{deck.kpis.grossMarginPath}</span></span>
+          <span>rate-independent <span className="text-[color:var(--ink)]">{deck.revenue.rateIndependentShare}</span></span>
+          <span>CAC payback <span className="text-[color:var(--ink)]">{deck.kpis.cacPayback}</span></span>
         </div>
       </Reveal>
     </div>
   )
 }
 
-// ── 10 · Status & The Ask ────────────────────────────────────────────────────
+// ── 10 · Current status ──────────────────────────────────────────────────────
+
+/** Offline QR code — matrix computed locally, rendered as inline SVG. */
+function QrCode(props: { value: string; size?: number }) {
+  const matrix = useMemo(() => {
+    try {
+      const qr = createQr(props.value, { errorCorrectionLevel: 'M' })
+      const size = qr.modules.size
+      const rows: boolean[][] = []
+      for (let r = 0; r < size; r++) {
+        const row: boolean[] = []
+        for (let c = 0; c < size; c++) row.push(!!qr.modules.get(r, c))
+        rows.push(row)
+      }
+      return rows
+    } catch {
+      return null
+    }
+  }, [props.value])
+  const px = props.size ?? 108
+  if (!matrix) return null
+  const n = matrix.length
+  return (
+    <svg width={px} height={px} viewBox={`0 0 ${n} ${n}`} aria-label="QR code to the live prototype" shapeRendering="crispEdges">
+      <rect width={n} height={n} fill="#f6f2e9" />
+      {matrix.flatMap((row, r) =>
+        row.map((on, c) => (on ? <rect key={`${r}-${c}`} x={c} y={r} width="1" height="1" fill="var(--ink)" /> : null)),
+      )}
+    </svg>
+  )
+}
+
+function StatusSlide() {
+  return (
+    <div>
+      <Reveal order={0}>
+        <Kicker>Current status</Kicker>
+        <HeadlinePair roman="Built." italic="Ready for rails." />
+      </Reveal>
+      <div className="mt-8 grid grid-cols-[1.3fr_1fr] gap-14">
+        <div>
+          <Reveal order={1}>
+            <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">Product</div>
+            <p className="mt-2 text-[14px] leading-relaxed text-[color:var(--ink)]/85">
+              Functioning prototype — compliance engine, event-sourced ledger, multi-client
+              environment, on partner rails as a registered agent.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2 text-[12px]">
+              {['Engine built', 'Prototype live', 'Unit economics modeled'].map((m) => (
+                <span key={m} className="border border-[color:var(--accent)] px-2 py-1 text-[color:var(--accent)]">
+                  ✓ {m}
+                </span>
+              ))}
+            </div>
+          </Reveal>
+          <Reveal order={2}>
+            <div className="mt-6 text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">Traction</div>
+            <p className="mt-2 text-[13px] italic leading-relaxed text-[color:var(--stone)]">
+              {deck.tractionPlaceholder}
+            </p>
+          </Reveal>
+          <Reveal order={3}>
+            <div className="mt-6 text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">
+              Next 6–12 months
+            </div>
+            <p className="mt-2 text-[14px] leading-relaxed text-[color:var(--ink)]/85">
+              Sign partner bank + EMI provider · launch first markets · first landlord and
+              property-manager cohorts — the {deck.persona.name}s of France and the Netherlands.
+            </p>
+          </Reveal>
+        </div>
+        <Reveal order={4} className="flex flex-col items-end justify-end">
+          <div className="border border-[color:var(--stone)]/40 p-3">
+            <QrCode value={deck.prototypeUrl} />
+          </div>
+          <div className="mt-2 text-[11px] uppercase tracking-[0.14em] text-[color:var(--stone)]">
+            See it live
+          </div>
+        </Reveal>
+      </div>
+    </div>
+  )
+}
+
+// ── 11 · The ask ─────────────────────────────────────────────────────────────
+
+const USE_DETAIL: Record<string, string> = {
+  'Product & engineering': 'prototype → production: live rails integration, compliance rulesets hardened, savings engine v1',
+  'Go-to-market': 'enterprise & partnership channels, first-market launch',
+  'Regulatory & market entry': 'legal, agent registration, groundwork for the EMI step',
+  'G&A': 'lean by design',
+}
 
 function AskSlide() {
   return (
     <div>
       <Reveal order={0}>
-        <Kicker>Status</Kicker>
-        <HeadlinePair roman="Built." italic="Climbing the licence ladder." />
+        <Kicker>The ask</Kicker>
+        <HeadlinePair
+          roman={<>Raising {deck.ask.amount}.</>}
+          italic={<>{deck.ask.months} months of focus.</>}
+        />
       </Reveal>
       <Reveal order={1}>
-        {/* The ascending three-step line — each step visibly higher. */}
-        <div className="mt-12 grid grid-cols-3 items-end gap-0">
-          {[
-            ['Now', 'Working prototype', 'six-regime compliance engine · multi-persona · PSD2 agent on partner rails', true, 0],
-            ['Series A', 'Own the EMI', 'the payment layer in-house — interchange, margin and control, not a fee', false, 44],
-            ['At scale', 'Banking licence', 'when retained margin beats the cost of capital', false, 88],
-          ].map(([when, step, line, done, rise]) => (
-            <div key={String(step)} style={{ marginBottom: Number(rise) }}>
-              <div className="border-t-2 border-[color:var(--ink)] pt-3 pr-6">
-                <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--stone)]">{when}</div>
-                <div className="deck-serif mt-1 text-2xl text-[color:var(--ink)]">
-                  {step}
-                  {done && <span className="ml-2 text-[color:var(--accent)]">✓</span>}
-                </div>
-                <div className="mt-1 text-[13px] leading-relaxed text-[color:var(--stone)]">{line}</div>
-              </div>
+        <div className="mt-10 flex h-9 w-full overflow-hidden border border-[color:var(--stone)]/40 text-[12px] text-[#f6f2e9]">
+          {deck.ask.use.map(([label, pct], i) => (
+            <div
+              key={label}
+              className="flex items-center justify-center"
+              style={{
+                width: `${pct}%`,
+                background: ['var(--ink)', '#3c4f60', 'var(--accent)', 'var(--stone)'][i],
+              }}
+            >
+              {pct}%
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 space-y-2">
+          {deck.ask.use.map(([label, pct]) => (
+            <div key={label} className="flex items-baseline gap-4 text-[13px]">
+              <span className="w-10 shrink-0 tabular-nums font-medium text-[color:var(--ink)]">{pct}%</span>
+              <span className="w-56 shrink-0 font-medium text-[color:var(--ink)]">{label}</span>
+              <span className="text-[color:var(--stone)]">{USE_DETAIL[label]}</span>
             </div>
           ))}
         </div>
       </Reveal>
-      <div className="mt-12 grid grid-cols-2 gap-14">
-        <Reveal order={2}>
+      <Reveal order={2}>
+        <div className="mt-8 border-t border-[color:var(--stone)]/30 pt-4">
+          <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">What it buys</div>
+          <p className="mt-2 text-[15px] leading-relaxed text-[color:var(--ink)]/85">{deck.ask.buys}</p>
+        </div>
+      </Reveal>
+      <Reveal order={3}>
+        <p className="deck-serif mt-10 text-3xl leading-snug text-[color:var(--ink)]">
+          A real product, a real plan —{' '}
+          <em className="text-[color:var(--accent)]">we'd love for you to be part of it.</em>
+        </p>
+      </Reveal>
+    </div>
+  )
+}
+
+// ── Appendix (Q&A only — not presented) ─────────────────────────────────────
+
+function AppendixSlide() {
+  const m = deck.marketAppendix
+  return (
+    <div className="text-[12px]">
+      <Kicker>Appendix — for Q&A</Kicker>
+      <div className="mt-6 grid grid-cols-2 gap-12">
+        <div>
           <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">
-            Use of funds
+            Market data — Eurostat CP041, EU27
           </div>
-          <div className="mt-4 flex h-9 w-full overflow-hidden border border-[color:var(--stone)]/40 text-[12px] text-[#f6f2e9]">
-            <div className="flex items-center justify-center" style={{ width: '50%', background: 'var(--ink)' }}>Product 50</div>
-            <div className="flex items-center justify-center" style={{ width: '30%', background: '#3c4f60' }}>GTM 30</div>
-            <div className="flex items-center justify-center" style={{ width: '15%', background: 'var(--accent)' }}>EMI 15</div>
-            <div className="flex items-center justify-center" style={{ width: '5%', background: 'var(--stone)' }}>5</div>
+          <div className="mt-3 flex gap-6 border-y border-[color:var(--stone)]/25 py-2">
+            {m.actuals.map(([yr, val]) => (
+              <div key={yr}>
+                <div className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--stone)]">{yr} actual</div>
+                <div className="tabular-nums font-medium text-[color:var(--ink)]">{val}</div>
+              </div>
+            ))}
+            <div className="self-center text-[color:var(--stone)]">{m.growthNote}</div>
           </div>
-          <div className="mt-2 text-[11px] text-[color:var(--stone)]">
-            Product 50 · Go-to-market 30 · Market-entry incl. EMI 15 · G&A 5 — the EMI is the
-            margin-and-control step.
+          <table className="mt-3 w-full">
+            <thead>
+              <tr className="border-b border-[color:var(--stone)]/25 text-left text-[10px] uppercase tracking-[0.1em] text-[color:var(--stone)]">
+                {m.scenarioHeads.map((h) => (
+                  <th key={h} className="py-1 pr-3 font-medium">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {m.scenarios.map((row) => (
+                <tr key={row[0]} className="border-b border-[color:var(--stone)]/15">
+                  {row.map((cell, i) => (
+                    <td key={i} className={`py-1 pr-3 tabular-nums ${i === 0 ? 'text-[color:var(--stone)]' : 'text-[color:var(--ink)]/85'}`}>
+                      {cell}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <Footnote>{m.caveat}</Footnote>
+
+          <div className="mt-8 text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">
+            Unit economics — per unit / yr
           </div>
-          <div className="mt-6 text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">
-            Next 6–12 months
+          <div className="mt-2 text-[color:var(--ink)]/85">
+            Full stack {eurInt(deck.revenue.fullStackPerUnit)} = SaaS {eurInt(deck.revenue.saas)} ·
+            savings fee {eurDec(deck.revenue.savingsFee)} · NIM share {eurInt(deck.revenue.nim)} ·
+            interchange {eurInt(deck.revenue.interchange)} · custody {eurInt(deck.revenue.custody)}{' '}
+            (+ premium tier & supplier network). Landlord side: value ≈ {eurInt(deck.landlordROI.value)}{' '}
+            vs fees ≈ {eurInt(deck.landlordROI.fees)} → {deck.landlordROI.cover} cover. Yield on
+            idle balances splits owner / Keystone / partner bank under the partner collar; the NIM
+            share is the only rate-linked line.
           </div>
-          <p className="mt-2 text-[13px] leading-relaxed text-[color:var(--ink)]/80">
-            First paying portfolios in France and the Netherlands · escrow rail signed · the
-            partner-bank channel from referral to revenue.
-          </p>
-        </Reveal>
-        <Reveal order={3} className="self-center">
-          <p className="deck-serif text-3xl leading-snug text-[color:var(--ink)]">
-            A real product, a real plan —<br />
-            <em className="text-[color:var(--accent)]">for the people who house Europe.</em>
-          </p>
-        </Reveal>
+        </div>
+        <div>
+          <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">
+            Statutory regime table — as encoded
+          </div>
+          <table className="mt-3 w-full">
+            <thead>
+              <tr className="border-b border-[color:var(--stone)]/25 text-left text-[10px] uppercase tracking-[0.1em] text-[color:var(--stone)]">
+                {['', 'Status', 'Deposit cap', 'Holding', 'Interest', 'Return clock'].map((h, i) => (
+                  <th key={i} className="py-1 pr-2 font-medium">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {deck.regimes.map((r) => (
+                <tr key={r.code} className="border-b border-[color:var(--stone)]/15 align-top">
+                  <td className="deck-serif py-1.5 pr-2 text-base text-[color:var(--ink)]">{r.code}</td>
+                  <td className={`py-1.5 pr-2 ${r.status === 'Live' ? 'text-[color:var(--accent)]' : 'text-[color:var(--stone)]'}`}>{r.status}</td>
+                  <td className="py-1.5 pr-2 text-[color:var(--ink)]/85">{r.cap}</td>
+                  <td className="py-1.5 pr-2 text-[color:var(--ink)]/85">{r.holding}</td>
+                  <td className="py-1.5 pr-2 text-[color:var(--ink)]/85">{r.interest}</td>
+                  <td className="py-1.5 text-[color:var(--ink)]/85">{r.clock}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <Footnote>
+            Versioned rules with legal references, tested like software; pricing detail on the
+            business-model slide.
+          </Footnote>
+        </div>
       </div>
     </div>
   )
