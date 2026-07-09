@@ -177,7 +177,7 @@ export default function Pitch() {
           </button>
         </div>
         {/* Progress rail */}
-        <div className="absolute bottom-0 left-0 h-[2px] w-full bg-white/10">
+        <div className="absolute bottom-0 left-0 h-[2px] w-full bg-black/5">
           <div
             className="h-full bg-[color:var(--ink)] transition-all duration-500"
             style={{ width: `${((Math.min(index, MAIN_COUNT - 1) + 1) / MAIN_COUNT) * 100}%` }}
@@ -191,7 +191,7 @@ export default function Pitch() {
               aria-label={`Slide ${i + 1}`}
               onClick={() => go(i)}
               className={`h-1.5 w-1.5 rounded-full transition-colors ${
-                i === index ? 'bg-[color:var(--ink)]' : 'bg-white/20 hover:bg-white/40'
+                i === index ? 'bg-[color:var(--ink)]' : 'bg-black/15 hover:bg-black/30'
               }`}
             />
           ))}
@@ -536,13 +536,13 @@ function ModelSlide() {
           </div>
           {/* the one red accent: Keystone's share of the collar */}
           <div className="mt-5 flex h-10 w-full overflow-hidden border border-[color:var(--hairline)] text-[13px]">
-            <div className="flex items-center justify-center bg-[color:var(--ink)] text-[#0f2440]" style={{ width: '60%' }}>
+            <div className="flex items-center justify-center bg-[color:var(--ink)] text-[#f6f2e9]" style={{ width: '60%' }}>
               Owner 60
             </div>
             <div className="flex items-center justify-center bg-[color:var(--accent)] text-white" style={{ width: '27%' }}>
               Keystone 27
             </div>
-            <div className="flex items-center justify-center bg-white/40 text-[#0f2440]" style={{ width: '13%' }}>
+            <div className="flex items-center justify-center text-[#0f2440]" style={{ width: '13%', background: 'rgba(15,36,64,0.15)' }}>
               Bank 13
             </div>
           </div>
@@ -647,8 +647,8 @@ function CompetitionSlide() {
 
 function PhotoPlaceholder() {
   return (
-    <div className="flex aspect-[4/5] w-full items-center justify-center border border-[color:var(--hairline)] bg-white/5">
-      <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.2">
+    <div className="flex aspect-[4/5] w-full items-center justify-center border border-[color:var(--hairline)] bg-black/5">
+      <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden fill="none" stroke="rgba(15,36,64,0.4)" strokeWidth="1.2">
         <circle cx="12" cy="9" r="3.4" />
         <path d="M5 20 a7 7 0 0 1 14 0" />
       </svg>
@@ -705,11 +705,20 @@ function ForecastChart() {
       {cols.map((c) => {
         const barTop = base - barH(c.revM)
         const dotY = c.ebitdaPct === null ? null : marginY(c.ebitdaPct)
-        const labelY = dotY !== null && Math.abs(barTop - dotY) < 20 ? Math.min(barTop, dotY) - 12 : barTop - 8
+        // If the margin dot/line crowds the bar top, the value label moves to
+        // the LEFT of the bar — clear of both the dot and the rising line.
+        const collides = dotY !== null && Math.abs(barTop - dotY) < 24
         return (
           <g key={c.yr}>
             <rect x={c.x - 26} y={barTop} width="52" height={barH(c.revM)} fill="var(--ink)" opacity="0.92" />
-            <text x={c.x} y={labelY} textAnchor="middle" fontSize="15" fill="var(--ink)" fontWeight="600">
+            <text
+              x={collides ? c.x - 32 : c.x}
+              y={collides ? barTop + 2 : barTop - 8}
+              textAnchor={collides ? 'end' : 'middle'}
+              fontSize="15"
+              fill="var(--ink)"
+              fontWeight="600"
+            >
               €{c.revM}M
             </text>
             <text x={c.x} y={base + 20} textAnchor="middle" fontSize="10" fill="var(--stone)" letterSpacing="1">
@@ -912,8 +921,11 @@ function AskSlide() {
           {deck.ask.use.map(([label, pct], i) => (
             <div
               key={label}
-              className={`flex items-center justify-center ${i === 0 ? 'bg-[color:var(--accent)] text-white' : 'text-[#0f2440]'}`}
-              style={i === 0 ? { width: `${pct}%` } : { width: `${pct}%`, background: '#ffffff', opacity: 1 - i * 0.18 }}
+              className={`flex items-center justify-center ${i <= 1 ? 'text-[#f6f2e9]' : 'text-[#0f2440]'}`}
+              style={{
+                width: `${pct}%`,
+                background: ['var(--accent)', '#0f2440', 'rgba(15,36,64,0.35)', 'rgba(15,36,64,0.15)'][i],
+              }}
             >
               {pct}%
             </div>
