@@ -687,13 +687,16 @@ function TeamSlide() {
  * margin and carries its note instead.
  */
 function ForecastChart() {
-  const base = 268
+  // Bars sit LOW (base 284, compressed sqrt scale) so every value label fits
+  // centered above its bar with clearance from the margin line — the Y2 dot
+  // (−40%) passes above the €2.1M label, never through it.
+  const base = 284
   const marginY = (pct: number) => 58 + (30 - pct) * 2.4
-  const barH = (revM: number) => Math.max(6, Math.sqrt(revM) * 26)
+  const barH = (revM: number) => Math.max(6, Math.sqrt(revM) * 18)
   const cols = deck.forecast.map((f, i) => ({ ...f, x: 96 + i * 108 }))
   const linePts = cols.filter((c) => c.ebitdaPct !== null)
   return (
-    <svg viewBox="0 0 600 330" className="w-full">
+    <svg viewBox="0 0 600 348" className="w-full">
       <line x1="40" y1={base} x2="580" y2={base} stroke="var(--stone)" strokeWidth="1" />
       <line x1="40" y1={marginY(0)} x2="580" y2={marginY(0)} stroke="var(--accent)" strokeWidth="0.6" strokeDasharray="3 5" opacity="0.7" />
       <text x="42" y={marginY(0) - 5} fontSize="9" fill="var(--accent)" letterSpacing="1">
@@ -704,21 +707,10 @@ function ForecastChart() {
       </text>
       {cols.map((c) => {
         const barTop = base - barH(c.revM)
-        const dotY = c.ebitdaPct === null ? null : marginY(c.ebitdaPct)
-        // If the margin dot/line crowds the bar top, the value label moves to
-        // the LEFT of the bar — clear of both the dot and the rising line.
-        const collides = dotY !== null && Math.abs(barTop - dotY) < 24
         return (
           <g key={c.yr}>
             <rect x={c.x - 26} y={barTop} width="52" height={barH(c.revM)} fill="var(--ink)" opacity="0.92" />
-            <text
-              x={collides ? c.x - 32 : c.x}
-              y={collides ? barTop + 2 : barTop - 8}
-              textAnchor={collides ? 'end' : 'middle'}
-              fontSize="15"
-              fill="var(--ink)"
-              fontWeight="600"
-            >
+            <text x={c.x} y={barTop - 8} textAnchor="middle" fontSize="15" fill="var(--ink)" fontWeight="600">
               €{c.revM}M
             </text>
             <text x={c.x} y={base + 20} textAnchor="middle" fontSize="10" fill="var(--stone)" letterSpacing="1">
