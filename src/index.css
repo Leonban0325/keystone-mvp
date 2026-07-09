@@ -158,20 +158,20 @@ body {
   font-display: swap;
 }
 
-/* The deck palette: navy field, beige display text, warm off-white body,
-   warm-grey muted, ONE red accent per slide at most. Hairlines are beige
-   at ~18% opacity (the `rule` class picks this up inside the deck). */
+/* The deck palette: blue-navy field, WHITE typography throughout (opacity
+   tiers carry the hierarchy), ONE red accent per slide at most. Hairlines
+   are white at ~16% (the `rule` class picks this up inside the deck). */
 .deck {
-  --ink: #f6f2e9; /* display / strong text (the Keystone beige) */
-  --body: #e8e2d4; /* body text on navy */
-  --stone: #9b8f7e; /* muted / secondary */
+  --ink: #ffffff; /* display / strong text */
+  --body: rgba(255, 255, 255, 0.85); /* body text */
+  --stone: rgba(255, 255, 255, 0.55); /* muted / secondary */
   --accent: #c1272d; /* the single red accent (placeholder — match template red) */
-  --hairline: rgba(246, 242, 233, 0.18);
-  background: #14202b; /* placeholder — replace with template navy */
+  --hairline: rgba(255, 255, 255, 0.16);
+  background: #0f2440; /* blue navy (placeholder — match template navy) */
   color: var(--body);
   font-family: 'Poppins', ui-sans-serif, system-ui, sans-serif;
 }
-/* The INTRO display voice: one dominant uppercase statement per slide. */
+/* The INTRO display voice: one big title per slide, top-left. */
 .deck-intro {
   font-family: 'Intro', 'Poppins', ui-sans-serif, system-ui, sans-serif;
   font-weight: 600;
@@ -179,6 +179,16 @@ body {
   letter-spacing: 0.01em;
   line-height: 0.95;
   color: var(--ink);
+}
+/* Present mode: the deck fills the screen as a column — strip on top,
+   slide content top-anchored, chrome pinned at the bottom. */
+.deck:fullscreen {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+.deck:fullscreen .deck-surface {
+  flex: 1 1 auto;
 }
 @keyframes deck-rise {
   from {
