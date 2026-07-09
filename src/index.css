@@ -163,10 +163,10 @@ body {
    are white at ~16% (the `rule` class picks this up inside the deck). */
 .deck {
   --ink: #ffffff; /* display / strong text */
-  --body: rgba(255, 255, 255, 0.85); /* body text */
-  --stone: rgba(255, 255, 255, 0.55); /* muted / secondary */
+  --body: rgba(255, 255, 255, 0.96); /* body text — near-white */
+  --stone: rgba(255, 255, 255, 0.68); /* muted / secondary */
   --accent: #c1272d; /* the single red accent (placeholder — match template red) */
-  --hairline: rgba(255, 255, 255, 0.16);
+  --hairline: rgba(255, 255, 255, 0.22);
   background: #0f2440; /* blue navy (placeholder — match template navy) */
   color: var(--body);
   font-family: 'Poppins', ui-sans-serif, system-ui, sans-serif;

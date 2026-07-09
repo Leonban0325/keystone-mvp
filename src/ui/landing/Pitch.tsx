@@ -223,10 +223,11 @@ function Statement(props: { children: ReactNode; size?: string; className?: stri
   )
 }
 
-/** THE one subtitle format: Poppins light, directly under the title. */
+/** THE one subtitle format: Poppins light in the muted tier, so the pure-
+ *  white INTRO title clearly dominates. */
 function Subtitle(props: { children: ReactNode; className?: string }) {
   return (
-    <p className={`mt-4 max-w-4xl text-[18px] font-light leading-relaxed text-[color:var(--body)] ${props.className ?? ''}`}>
+    <p className={`mt-4 max-w-4xl text-[19px] font-light leading-relaxed text-[color:var(--stone)] ${props.className ?? ''}`}>
       {props.children}
     </p>
   )
