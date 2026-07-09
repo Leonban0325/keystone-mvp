@@ -19,12 +19,15 @@ export const deck = {
     rentProjected2030: '≈ €246bn', // central scenario
     provenance:
       "Eurostat nama_10_co3_p3, item CP041 'Actual rentals for housing', EU27. 2022 actual €176.8bn; projections at 4.2% CAGR (central scenario).",
-    deDepositPool: "Germany's deposit pool alone: est. €25–50bn",
+    // Germany fix: §551 BGB requires interest-bearing deposits with interest
+    // to the tenant, so no "German deposits idle at 0%" claim anywhere.
+    idleFraming:
+      'In France, deposits are held by the landlord, often in non-interest-bearing accounts, and reserves sit idle. Across Europe, billions in deposit and reserve cash earns nothing.',
   },
 
   problem: {
-    hoursPerUnit: '5–10 h / property / month', // footnote: internal estimate, landlord interviews
-    missedIndexation: '1.5–3.5% of rent lost / yr when indexation is missed',
+    hoursPerUnit: '5 to 10 hours / property / month', // footnote: internal estimate, landlord interviews
+    missedIndexation: '1.5 to 3.5% of rent lost / yr when indexation is missed',
     frPenalty: 'late deposit return: 10% of monthly rent per month (FR)',
     disputeCost: "a lost deposit dispute ≈ one month's rent or more",
   },
@@ -67,22 +70,80 @@ export const deck = {
   },
 
   landlordROI: {
-    value: 486,
-    fees: 96,
-    cover: '≈ 5×',
+    // Option B math: fees paid = SaaS + custody only. The NIM share and the
+    // savings fee come out of money the landlord gains, not his pocket.
+    valueReceived: 442, // 169 + 160 + 113
     parts: { yieldKept: 169, softwareReplaced: 160, savingsKept: 113 },
+    feesPaid: 156, // SaaS Pro €144 (€12/unit/mo × 12) + custody €12
+    cover: 'about 2.8x', // 442 / 156
   },
 
   ask: {
-    amount: '€1.5M',
-    months: 24,
+    amount: '€750k',
+    months: 18,
+    structure: 'about 12% equity (SAFE or priced), about €6M post-money', // CONFIRM with team
+    investorsGet:
+      'about 12% equity at roughly €6M post-money, plus a board observer seat, funding the step from working prototype to first paying cohorts', // CONFIRM
     use: [
       ['Product & engineering', 50],
       ['Go-to-market', 30],
       ['Regulatory & market entry', 15],
       ['G&A', 5],
     ] as [string, number][],
-    buys: '24 months runway · first 10–12,000 units live · Series A proof points (retention, revenue/unit, enterprise contracts)',
+    buys: '18 months runway to first revenue · first 8 to 10,000 units live · proof points for seed/Series A: retention, revenue per unit, signed enterprise contracts',
+  },
+
+  /** Slide 7 — four real tiers. Companies named with what they DO only; no
+   *  funding amounts or valuation multiples on the slide. */
+  competition: {
+    headline: { roman: 'No one does all of it.', italic: 'Everyone does a slice.' },
+    tiers: [
+      {
+        tier: 'Deposit & escrow fintechs',
+        closest: true,
+        names: 'Getmomo, Mietwise (DE) · Evorest (CH) · Garantme, Depopass (FR)',
+        does: 'single-country; tenant-keeps-yield or insurance, not owner-split custody + rails + treasury',
+      },
+      {
+        tier: 'Landlord SaaS / apps',
+        closest: false,
+        names: 'August, Lendlord (UK) · Rentila, Beanstock (FR) · Proper (NL/DE/DK)',
+        does: 'win operations and reconciliation; do not hold deposit money or run multi-country compliance',
+      },
+      {
+        tier: 'Traditional banks',
+        closest: false,
+        names: 'Sparkassen · CaixaBank · VP Bank',
+        does: 'legal deposit accounts, but manual, flat-fee, no yield automation, single-country',
+      },
+      {
+        tier: 'Pan-European deposit / wealth infra',
+        closest: false,
+        names: 'Raisin (closest public comp)',
+        does: 'cross-border yield marketplace, no tenancy-lifecycle compliance engine or rent rails',
+      },
+    ],
+    moat: "The only platform combining cross-border compliance (France's Loi 89-462, the Dutch Good Landlord Act, Spain's regional LAU Art. 36 filings), automated rent rails, and owner deposit-yield sharing on one ledger.",
+  },
+
+  /** Appendix — "The math" (Q&A only, not presented). */
+  math: {
+    model: [
+      'Balances / unit = €2,500 deposit + €10,000 reserve = €12,500',
+      'NIM = €12,500 × (27% × 2.25%) = €12,500 × 0.6075% = €75.94',
+      'SaaS ≈ €96 (blended) · Custody = €1 × 12 = €12 · Interchange ≈ €16 (≈ €2,000 spend × 0.8%) · Savings fee = 25% × documented savings ≈ €37.50',
+      'Full stack ≈ €225 · rate-independent ≈ €161 (about two-thirds) · at ECB 2.25%',
+    ],
+    roi: [
+      'Value: yield kept €169 + software replaced €160 + savings kept €113 = €442',
+      'Fees: SaaS Pro €144 (€12 × 12) + custody €12 = €156',
+      'Cover = 442 / 156 ≈ 2.8x',
+      'Fees paid = SaaS + custody only; the NIM share and savings fee come out of money the landlord gains, not his pocket.',
+    ],
+    financials: [
+      'revenue = units × revenue/unit (path €150 → €214 as card + savings adoption rises)',
+      'e.g. Y5: 160,000 × €214 ≈ €34.2M · Balances Y5 = 160,000 × €12,500 = €2.0bn',
+    ],
   },
 
   // ── supporting fields (same source-of-truth rule) ──────────────────────────
@@ -92,10 +153,10 @@ export const deck = {
 
   /** Slide 8 — role per founder (credibility lines are bracketed placeholders). */
   team: [
-    { name: 'Leon Ban', role: 'Product & engineering', line: '[credibility line — to fill]' },
-    { name: 'Badriah Al-Besharah', role: 'Regulatory & operations', line: '[credibility line — to fill]' },
-    { name: 'Duong Bui', role: 'Finance & treasury', line: '[credibility line — to fill]' },
-    { name: 'Mark Gebrane', role: 'Growth & partnerships', line: '[credibility line — to fill]' },
+    { name: 'Leon Ban', role: 'Product & engineering', line: '[credibility line to fill]' },
+    { name: 'Badriah Al-Besharah', role: 'Regulatory & operations', line: '[credibility line to fill]' },
+    { name: 'Duong Bui', role: 'Finance & treasury', line: '[credibility line to fill]' },
+    { name: 'Mark Gebrane', role: 'Growth & partnerships', line: '[credibility line to fill]' },
   ],
 
   /** Slide 10 — the bracketed traction placeholder (fill or delete before presenting). */
