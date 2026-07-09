@@ -258,10 +258,7 @@ function ProblemSlide() {
       'Money leaking',
       `${deck.problem.missedIndexation}; overpaid taxes, utilities, insurance and vendor contracts go unnoticed year after year.`,
     ],
-    [
-      'Cash frozen',
-      `every one of these tenancies carries a deposit and a reserve sitting at 0%. ${deck.market.deDepositPool}.`,
-    ],
+    ['Cash idle', deck.market.idleFraming],
     ['Risk accumulating', `${deck.problem.disputeCost}; ${deck.problem.frPenalty}.`],
   ]
   return (
@@ -269,7 +266,7 @@ function ProblemSlide() {
       <Reveal order={0}>
         <Kicker>The problem</Kicker>
         <div className="mt-3 text-sm text-[color:var(--ink)]/80">
-          Meet {deck.persona.name} — {deck.persona.desc}.
+          Meet {deck.persona.name} · {deck.persona.desc}.
         </div>
         <p className="mt-2 max-w-3xl text-[15px] leading-relaxed text-[color:var(--stone)]">
           <span className="text-[color:var(--ink)]">Rental finance was never built as a system.</span>{' '}
@@ -282,7 +279,7 @@ function ProblemSlide() {
         <div className="deck-serif mt-6 text-5xl font-medium leading-[1.15] text-[color:var(--ink)]">
           European tenants pay{' '}
           <span className="text-[color:var(--accent)]">{deck.market.rentActual2022}</span> in rent
-          every year — and rising.
+          every year, and rising.
         </div>
         <div className="mt-2 text-sm text-[color:var(--stone)]">
           growing {deck.market.rentHistGrowth} · projected {deck.market.rentProjected2026} by 2026
@@ -299,8 +296,8 @@ function ProblemSlide() {
           ))}
         </div>
         <Footnote>
-          Hours and leakage figures: internal estimates from landlord interviews. Deposit-pool
-          figure: estimate. Statutory penalty and market figures: as reported.
+          Hours and leakage figures: internal estimates from landlord interviews. Statutory
+          penalty and market figures: as reported.
         </Footnote>
       </Reveal>
       <Reveal order={3}>
@@ -393,15 +390,15 @@ function ValueSlide() {
           <div className="mt-3 flex flex-wrap gap-x-8 gap-y-1 text-[12px] leading-relaxed text-[color:var(--stone)]">
             <span>
               <span className="font-semibold text-[color:var(--ink)]">1</span> Connect the
-              portfolio — rent-roll import, a data migration, not a sales cycle
+              portfolio · rent-roll import, a data migration, not a sales cycle
             </span>
             <span>
-              <span className="font-semibold text-[color:var(--ink)]">2</span> Rails switch over —
+              <span className="font-semibold text-[color:var(--ink)]">2</span> Rails switch over ·
               per-lease account, self-reconciling
             </span>
             <span>
               <span className="font-semibold text-[color:var(--ink)]">3</span> The system takes
-              over — books, deadlines, cost-detection, treasury
+              over · books, deadlines, cost-detection, treasury
             </span>
           </div>
           <div className="mt-3 text-[12px] text-[color:var(--ink)]/70">
@@ -457,7 +454,7 @@ function MagicSlide() {
         <Reveal order={1}>
           <div className="space-y-0">
             {[
-              ['Compliance engine', 'European statutory regimes as versioned rules-as-code — caps, clocks, lodgement, interest. Ours; the moat.'],
+              ['Compliance engine', 'European statutory regimes as versioned rules-as-code: caps, clocks, lodgement, interest. Ours; the moat.'],
               ['EMI / escrow rail', 'A regulated escrow layer moves every euro. Rented, not built.'],
               [`${PARTNER_BANK.short} vault`, 'Client funds segregated, DGS-protected, insolvency-remote at the partner bank.'],
             ].map(([title, line], i) => (
@@ -469,10 +466,10 @@ function MagicSlide() {
           </div>
           <div className="mt-4 flex items-baseline gap-3 text-[13px] text-[color:var(--stone)]">
             <span className="deck-serif text-lg text-[color:var(--accent)]">Keystone</span>
-            beside the flow — money never touches our balance sheet.
+            beside the flow · money never touches our balance sheet.
           </div>
           <p className="mt-6 border-t border-[color:var(--stone)]/30 pt-4 text-[15px] text-[color:var(--stone)]">
-            Deterministic core — <span className="text-[color:var(--ink)]">rules decide, AI only reads documents.</span>
+            Deterministic core: <span className="text-[color:var(--ink)]">rules decide, AI only reads documents.</span>
           </p>
         </Reveal>
         <Reveal order={2}>
@@ -492,12 +489,12 @@ function MagicSlide() {
 
 function ModelSlide() {
   const streams: [string, string][] = [
-    ['SaaS subscription — the core', eurInt(deck.revenue.saas)],
-    ['Savings engine success fee — 25% of documented first-year savings', eurDec(deck.revenue.savingsFee)],
-    ['NIM share — 27% of yield on idle balances (the only rate-linked line)', eurInt(deck.revenue.nim)],
+    ['SaaS subscription · the core', eurInt(deck.revenue.saas)],
+    ['Savings engine success fee · 25% of documented first-year savings', eurDec(deck.revenue.savingsFee)],
+    ['NIM share · 27% of yield on idle balances (the only rate-linked line)', eurInt(deck.revenue.nim)],
     ['Card interchange', eurInt(deck.revenue.interchange)],
     ['Deposit custody & guarantee', eurInt(deck.revenue.custody)],
-    ['Premium compliance tier — lodgement-market workflows', '—'],
+    ['Premium compliance tier · lodgement-market workflows', '—'],
     ['Supplier network / embedded finance', 'later'],
   ]
   return (
@@ -516,7 +513,7 @@ function ModelSlide() {
       <div className="mt-8 grid grid-cols-[1.25fr_1fr] gap-14">
         <Reveal order={1}>
           <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">
-            Seven revenue streams — per unit / yr
+            Seven revenue streams · per unit / yr
           </div>
           <div className="mt-3 divide-y divide-[color:var(--stone)]/25 border-y border-[color:var(--stone)]/25">
             {streams.map(([label, value]) => (
@@ -610,46 +607,33 @@ function CompetitionSlide() {
     <div>
       <Reveal order={0}>
         <Kicker>Competition</Kicker>
-        <HeadlinePair roman="Alone in the quadrant." />
+        <HeadlinePair
+          roman={deck.competition.headline.roman}
+          italic={deck.competition.headline.italic}
+        />
       </Reveal>
-      <div className="mt-8 grid grid-cols-[1fr_320px] gap-10">
-        <Reveal order={1}>
-          <svg viewBox="0 0 520 340" className="w-full">
-            {/* two thin ink axes — no bounding box */}
-            <line x1="60" y1="20" x2="60" y2="300" stroke="var(--ink)" strokeWidth="1" />
-            <line x1="60" y1="300" x2="500" y2="300" stroke="var(--ink)" strokeWidth="1" />
-            <text x="500" y="318" textAnchor="end" fontSize="11" fill="var(--stone)">multi-country compliance →</text>
-            <text x="64" y="318" fontSize="11" fill="var(--stone)">single-country</text>
-            <text x="48" y="26" fontSize="11" fill="var(--stone)" transform="rotate(-90 48 26)" textAnchor="end">moves & grows money →</text>
-            <text x="48" y="300" fontSize="11" fill="var(--stone)" transform="rotate(-90 48 300)">software only</text>
-            {[
-              [120, 268, 'Property-management SaaS'],
-              [95, 175, 'Bank business accounts'],
-              [160, 235, 'National deposit schemes'],
-              [225, 255, 'Deposit-replacement insurers'],
-              [180, 85, 'Goldbridge / US peers'],
-            ].map(([x, y, label]) => (
-              <g key={String(label)}>
-                <circle cx={Number(x)} cy={Number(y)} r="4" fill="var(--stone)" />
-                <text x={Number(x) + 9} y={Number(y) + 4} fontSize="12" fill="var(--ink)" opacity="0.75">{label}</text>
-              </g>
-            ))}
-            <g>
-              <circle cx="435" cy="52" r="8" fill="var(--accent)" />
-              <text x="435" y="32" textAnchor="middle" fontSize="15" fill="var(--ink)" fontWeight="600">Keystone</text>
-            </g>
-          </svg>
-        </Reveal>
-        <Reveal order={2} className="self-center text-[13px] leading-relaxed">
-          <ul className="space-y-3 text-[color:var(--ink)]/80">
-            <li><span className="font-medium text-[color:var(--ink)]">Property-management SaaS</span> — no money movement.</li>
-            <li><span className="font-medium text-[color:var(--ink)]">Bank business accounts</span> — no rental compliance.</li>
-            <li><span className="font-medium text-[color:var(--ink)]">National deposit schemes</span> — hold-only.</li>
-            <li><span className="font-medium text-[color:var(--ink)]">Deposit-replacement insurers</span> — tenant-side product.</li>
-            <li><span className="font-medium text-[color:var(--ink)]">Goldbridge / US peers</span> — validates the thesis; no European compliance engine.</li>
-          </ul>
-        </Reveal>
-      </div>
+      <Reveal order={1}>
+        <div className="mt-10 divide-y divide-[color:var(--stone)]/25 border-y border-[color:var(--stone)]/25">
+          {deck.competition.tiers.map((tier, i) => (
+            <div key={tier.tier} className="grid grid-cols-[220px_1fr_1.2fr] items-baseline gap-6 py-3">
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--stone)]">
+                  Tier {i + 1}
+                  {tier.closest && <span className="ml-2 text-[color:var(--accent)]">closest</span>}
+                </div>
+                <div className="deck-serif mt-1 text-lg leading-snug text-[color:var(--ink)]">{tier.tier}</div>
+              </div>
+              <div className="text-[13px] leading-relaxed text-[color:var(--ink)]/85">{tier.names}</div>
+              <div className="text-[13px] leading-relaxed text-[color:var(--stone)]">{tier.does}</div>
+            </div>
+          ))}
+        </div>
+      </Reveal>
+      <Reveal order={2}>
+        <p className="deck-serif mt-8 max-w-4xl text-xl italic leading-relaxed text-[color:var(--ink)]/85">
+          {deck.competition.moat}
+        </p>
+      </Reveal>
     </div>
   )
 }
@@ -782,14 +766,14 @@ function FinancialsSlide() {
         <Reveal order={1}>
           <ForecastChart />
           <div className="mt-1 text-[11px] leading-relaxed text-[color:var(--stone)]">
-            Growth via enterprise & partnership onboarding — units per contract, not one-by-one
+            Growth via enterprise & partnership onboarding: units per contract, not one-by-one
             sales; revenue/unit rises {deck.kpis.revPerUnitPath} as card + savings adoption
             climbs.
           </div>
         </Reveal>
         <Reveal order={2} className="self-center">
           <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">
-            {deck.persona.name} profits too — per unit / yr
+            {deck.persona.name} profits too · per unit / yr
           </div>
           <div className="mt-3 divide-y divide-[color:var(--stone)]/25 border-y border-[color:var(--stone)]/25 text-[13px]">
             <div className="flex justify-between py-2">
@@ -805,13 +789,14 @@ function FinancialsSlide() {
               <span className="tabular-nums">{eurInt(roi.parts.savingsKept)}</span>
             </div>
             <div className="flex justify-between py-2 font-medium text-[color:var(--ink)]">
-              <span>Value received ≈ {eurInt(roi.value)} vs fees ≈ {eurInt(roi.fees)}</span>
-              <span className="text-[color:var(--accent)]">{roi.cover} cover</span>
+              <span>Value ≈ {eurInt(roi.valueReceived)} vs fees ≈ {eurInt(roi.feesPaid)}</span>
+              <span className="text-[color:var(--accent)]">{roi.cover}</span>
             </div>
           </div>
           <p className="mt-3 text-[12px] leading-relaxed text-[color:var(--stone)]">
-            The savings engine alone typically covers the subscription — we only earn when the
-            landlord saves.
+            {deck.persona.name} gets about {eurInt(roi.valueReceived)} of value per unit for{' '}
+            {eurInt(roi.feesPaid)} in fees, nearly 3x. The savings engine alone typically covers
+            the subscription.
           </p>
         </Reveal>
       </div>
@@ -872,7 +857,7 @@ function StatusSlide() {
           <Reveal order={1}>
             <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">Product</div>
             <p className="mt-2 text-[14px] leading-relaxed text-[color:var(--ink)]/85">
-              Functioning prototype — compliance engine, event-sourced ledger, multi-client
+              Functioning prototype: compliance engine, event-sourced ledger, multi-client
               environment, on partner rails as a registered agent.
             </p>
             <div className="mt-4 flex flex-wrap gap-2 text-[12px]">
@@ -891,11 +876,11 @@ function StatusSlide() {
           </Reveal>
           <Reveal order={3}>
             <div className="mt-6 text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">
-              Next 6–12 months
+              Next 6 to 12 months
             </div>
             <p className="mt-2 text-[14px] leading-relaxed text-[color:var(--ink)]/85">
               Sign partner bank + EMI provider · launch first markets · first landlord and
-              property-manager cohorts — the {deck.persona.name}s of France and the Netherlands.
+              property-manager cohorts · the {deck.persona.name}s of France and the Netherlands.
             </p>
           </Reveal>
         </div>
@@ -957,15 +942,21 @@ function AskSlide() {
         </div>
       </Reveal>
       <Reveal order={2}>
-        <div className="mt-8 border-t border-[color:var(--stone)]/30 pt-4">
-          <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">What it buys</div>
-          <p className="mt-2 text-[15px] leading-relaxed text-[color:var(--ink)]/85">{deck.ask.buys}</p>
+        <div className="mt-8 grid grid-cols-2 gap-12 border-t border-[color:var(--stone)]/30 pt-4">
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">What it buys</div>
+            <p className="mt-2 text-[14px] leading-relaxed text-[color:var(--ink)]/85">{deck.ask.buys}</p>
+          </div>
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">What investors get</div>
+            <p className="mt-2 text-[14px] leading-relaxed text-[color:var(--ink)]/85">{deck.ask.investorsGet}.</p>
+          </div>
         </div>
       </Reveal>
       <Reveal order={3}>
         <p className="deck-serif mt-10 text-3xl leading-snug text-[color:var(--ink)]">
-          A real product, a real plan —{' '}
-          <em className="text-[color:var(--accent)]">we'd love for you to be part of it.</em>
+          A real product, a real plan.{' '}
+          <em className="text-[color:var(--accent)]">We'd love for you to be part of it.</em>
         </p>
       </Reveal>
     </div>
@@ -978,11 +969,11 @@ function AppendixSlide() {
   const m = deck.marketAppendix
   return (
     <div className="text-[12px]">
-      <Kicker>Appendix — for Q&A</Kicker>
+      <Kicker>Appendix · for Q&A</Kicker>
       <div className="mt-6 grid grid-cols-2 gap-12">
         <div>
           <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">
-            Market data — Eurostat CP041, EU27
+            Market data · Eurostat CP041, EU27
           </div>
           <div className="mt-3 flex gap-6 border-y border-[color:var(--stone)]/25 py-2">
             {m.actuals.map(([yr, val]) => (
@@ -1016,21 +1007,33 @@ function AppendixSlide() {
           <Footnote>{m.caveat}</Footnote>
 
           <div className="mt-8 text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">
-            Unit economics — per unit / yr
+            The math · A · business model, {eurInt(deck.revenue.fullStackPerUnit)}/unit/yr
           </div>
-          <div className="mt-2 text-[color:var(--ink)]/85">
-            Full stack {eurInt(deck.revenue.fullStackPerUnit)} = SaaS {eurInt(deck.revenue.saas)} ·
-            savings fee {eurDec(deck.revenue.savingsFee)} · NIM share {eurInt(deck.revenue.nim)} ·
-            interchange {eurInt(deck.revenue.interchange)} · custody {eurInt(deck.revenue.custody)}{' '}
-            (+ premium tier & supplier network). Landlord side: value ≈ {eurInt(deck.landlordROI.value)}{' '}
-            vs fees ≈ {eurInt(deck.landlordROI.fees)} → {deck.landlordROI.cover} cover. Yield on
-            idle balances splits owner / Keystone / partner bank under the partner collar; the NIM
-            share is the only rate-linked line.
+          <div className="mt-2 space-y-1 text-[11px] leading-relaxed text-[color:var(--ink)]/85">
+            {deck.math.model.map((line) => (
+              <div key={line}>{line}</div>
+            ))}
+          </div>
+          <div className="mt-5 text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">
+            The math · B · {deck.persona.name} ROI (mid landlord, Pro)
+          </div>
+          <div className="mt-2 space-y-1 text-[11px] leading-relaxed text-[color:var(--ink)]/85">
+            {deck.math.roi.map((line) => (
+              <div key={line}>{line}</div>
+            ))}
+          </div>
+          <div className="mt-5 text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">
+            The math · C · financials derivation
+          </div>
+          <div className="mt-2 space-y-1 text-[11px] leading-relaxed text-[color:var(--ink)]/85">
+            {deck.math.financials.map((line) => (
+              <div key={line}>{line}</div>
+            ))}
           </div>
         </div>
         <div>
           <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--stone)]">
-            Statutory regime table — as encoded
+            Statutory regime table · as encoded
           </div>
           <table className="mt-3 w-full">
             <thead>

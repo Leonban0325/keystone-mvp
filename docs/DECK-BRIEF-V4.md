@@ -51,3 +51,21 @@ Eurostat CP041 actuals + scenario table with caveat · statutory regime table (a
 - Slide 10: bracketed traction placeholder + QR to the prototype.
 - Appendix: Eurostat scenario table + regime table.
 - Deck reads cleanly with animations disabled at 1920×1080.
+
+## Confirmed fixes (applied on top of the brief)
+1. Laurent ROI, Option B: value €442 (169+160+113) vs fees €156 (SaaS Pro €144 + custody €12)
+   → about 2.8x cover. Fees paid = SaaS + custody only (NIM share and savings fee come out of
+   money he gains). All €486 / 5x references removed.
+2. Germany fix: no "German deposit pool idle at 0%" claim (§551 BGB requires interest-bearing
+   deposits with interest to the tenant). "Cash idle" consequence uses the France-anchored
+   idleFraming line.
+3. Ask lowered: €750k / 18 months; structure about 12% equity at roughly €6M post-money
+   (CONFIRM with team) plus a board observer seat; buys 18 months runway, first 8 to 10,000
+   units, seed/Series A proof points.
+4. Competition slide replaced with four real tiers (deposit & escrow fintechs · landlord SaaS
+   · traditional banks · pan-European deposit/wealth infra), companies named with what they DO
+   only, no funding/valuation figures; moat line names Loi 89-462, the Dutch Good Landlord Act
+   and Spain's regional LAU Art. 36 filings.
+5. Appendix "The math": A business-model derivation at ECB 2.25%, B Laurent ROI math,
+   C financials derivation (units × revenue/unit; Y5 balances), D Eurostat detail.
+6. Punctuation: em/en dashes minimised in display copy; ranges as "to"; middot separators.
