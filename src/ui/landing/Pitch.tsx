@@ -897,47 +897,40 @@ function StatusSlide() {
 
 // ── 11 · The ask ─────────────────────────────────────────────────────────────
 
-const USE_DETAIL: Record<string, string> = {
-  'Product & engineering': 'prototype → production: rails, rulesets, savings engine v1',
-  'Go-to-market': 'enterprise & partnership channels, first-market launch',
-  'Regulatory & market entry': 'legal, agent registration, EMI groundwork',
-  'G&A': 'lean by design',
-}
-
 function AskSlide() {
   return (
     <div>
       <Reveal order={0}>
-        <div className="flex items-baseline gap-8">
-          <Statement size="text-[7rem]">{deck.ask.amount}.</Statement>
-          <span className="text-[18px] font-light text-[color:var(--stone)]">
-            {deck.ask.months} months of focus
-          </span>
-        </div>
-        <Subtitle>A real product, a real plan. We'd love for you to be part of it.</Subtitle>
+        <Statement>The ask.</Statement>
+        <Subtitle>
+          Raising {deck.ask.amount} · {deck.ask.months} months runway to first revenue.
+        </Subtitle>
       </Reveal>
       <Reveal order={1}>
-        {/* use-of-funds: white segments, red highlight on the lead allocation */}
-        <div className="mt-8 flex h-9 w-full overflow-hidden border border-[color:var(--hairline)] text-[12px]">
-          {deck.ask.use.map(([label, pct], i) => (
+        {/* use-of-funds: the visual anchor — red lead segment, navy steps;
+            each segment reads share AND amount at once */}
+        <div className="mt-8 flex h-10 w-full overflow-hidden border border-[color:var(--hairline)] text-[12px]">
+          {deck.ask.use.map((u, i) => (
             <div
-              key={label}
-              className={`flex items-center justify-center ${i <= 1 ? 'text-[#f6f2e9]' : 'text-[#0f2440]'}`}
+              key={u.label}
+              className={`flex items-center justify-center gap-2 whitespace-nowrap ${i <= 1 ? 'text-[#f6f2e9]' : 'text-[#0f2440]'}`}
               style={{
-                width: `${pct}%`,
+                width: `${u.pct}%`,
                 background: ['var(--accent)', '#0f2440', 'rgba(15,36,64,0.35)', 'rgba(15,36,64,0.15)'][i],
               }}
             >
-              {pct}%
+              <span className="font-medium tabular-nums">{u.pct}%</span>
+              {u.pct >= 15 && <span className="font-light tabular-nums">{u.amount}</span>}
             </div>
           ))}
         </div>
-        <div className="mt-4 space-y-2">
-          {deck.ask.use.map(([label, pct]) => (
-            <div key={label} className="flex items-baseline gap-4 text-[13px]">
-              <span className="w-10 shrink-0 tabular-nums font-medium text-[color:var(--ink)]">{pct}%</span>
-              <span className="w-60 shrink-0 font-medium text-[color:var(--ink)]">{label}</span>
-              <span className="font-light text-[color:var(--stone)]">{USE_DETAIL[label]}</span>
+        <div className="mt-5 grid grid-cols-2 gap-x-14 gap-y-4">
+          {deck.ask.use.map((u) => (
+            <div key={u.label}>
+              <div className="text-[14px] font-medium text-[color:var(--ink)]">
+                {u.label} · {u.pct}% <span className="font-light">({u.amount})</span>
+              </div>
+              <p className="mt-1 text-[12.5px] font-light leading-relaxed text-[color:var(--stone)]">{u.detail}</p>
             </div>
           ))}
         </div>
@@ -950,7 +943,7 @@ function AskSlide() {
           </div>
           <div>
             <Label>What investors get</Label>
-            <p className="mt-2 text-[14px] font-light leading-relaxed text-[color:var(--body)]">{deck.ask.investorsGet}.</p>
+            <p className="mt-2 text-[14px] font-light leading-relaxed text-[color:var(--body)]">{deck.ask.investorsGet}</p>
           </div>
         </div>
       </Reveal>

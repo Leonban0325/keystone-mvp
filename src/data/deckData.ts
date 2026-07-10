@@ -84,14 +84,34 @@ export const deck = {
     months: 18,
     structure: 'about 12% equity (SAFE or priced), about €6M post-money', // CONFIRM with team
     investorsGet:
-      'about 12% equity at roughly €6M post-money, plus a board observer seat, funding the step from working prototype to first paying cohorts', // CONFIRM
+      'About 12% equity (SAFE or priced), roughly €6M post-money, plus a board-observer seat, funding the step from working prototype to first paying cohorts.', // CONFIRM
     use: [
-      ['Product & engineering', 50],
-      ['Go-to-market', 30],
-      ['Regulatory & market entry', 15],
-      ['G&A', 5],
-    ] as [string, number][],
-    buys: '18 months runway to first revenue · first 8 to 10,000 units live · proof points for seed/Series A: retention, revenue per unit, signed enterprise contracts',
+      {
+        label: 'Product & engineering',
+        pct: 50,
+        amount: '≈€375k',
+        detail: 'Technical hire, partner-bank and rails integration, security audit, ledger infrastructure.',
+      },
+      {
+        label: 'Go-to-market',
+        pct: 30,
+        amount: '≈€225k',
+        detail: 'First-market pilots in France, Netherlands, Spain: partnerships, onboarding, first cohorts.',
+      },
+      {
+        label: 'Regulatory & market entry',
+        pct: 15,
+        amount: '≈€112k',
+        detail: 'Payment-agent registration, regulatory counsel, EMI-authorisation groundwork.',
+      },
+      {
+        label: 'G&A',
+        pct: 5,
+        amount: '≈€38k',
+        detail: 'Accounting, admin, insurance, operating overhead.',
+      },
+    ],
+    buys: '18 months to first revenue · first 8 to 10,000 units live · the proof points for a seed or Series A: retention, revenue per unit, signed enterprise contracts.',
   },
 
   /** Appendix F — how the €750k was derived (Q&A only). Founders draw no
