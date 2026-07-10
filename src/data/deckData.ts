@@ -26,7 +26,7 @@ export const deck = {
   },
 
   problem: {
-    hoursPerUnit: '5 to 10 hours / property / month', // footnote: internal estimate, landlord interviews
+    hoursPerUnit: '5 to 10 hours / property / month',
     missedIndexation: '1.5 to 3.5% of rent lost / yr when indexation is missed',
     frPenalty: 'late deposit return: 10% of monthly rent per month (FR)',
     disputeCost: "a lost deposit dispute ≈ one month's rent or more",
@@ -67,7 +67,6 @@ export const deck = {
     balancesY5: '≈ €2.0bn',
     revPerUnitPath: '€150 → €214',
     grossMarginPath: '73% → 82%',
-    cacPayback: '< 12 months (enterprise)',
   },
 
   landlordROI: {
@@ -220,7 +219,6 @@ export const deck = {
       'Balances Y5 = 160,000 × €12,500 = €2.0bn.',
       'Revenue/unit €150 → €214 = rising card + savings adoption over 5 yrs.',
       'Gross margin 73% → 82% = platform + partner costs about fixed, spread over a growing unit base.',
-      "CAC payback < 12 mo = enterprise/partnership contracts land many units per sale, so cost per unit is low and recovered within a year of that contract's revenue.",
     ],
     roi: [
       'Value: yield kept €169 + software replaced €160 + savings kept €113 = €442',

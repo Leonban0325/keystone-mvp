@@ -322,10 +322,7 @@ function ProblemSlide() {
             </div>
           ))}
         </div>
-        <Footnote>
-          {deck.market.provenance} Hours and leakage figures: internal estimates from landlord
-          interviews.
-        </Footnote>
+        <Footnote>{deck.market.provenance}</Footnote>
       </Reveal>
     </div>
   )
@@ -813,7 +810,6 @@ function FinancialsSlide() {
           <span>revenue/unit <span className="font-normal text-[color:var(--ink)]">{deck.kpis.revPerUnitPath}</span></span>
           <span>gross margin <span className="font-normal text-[color:var(--ink)]">{deck.kpis.grossMarginPath}</span></span>
           <span>rate-independent <span className="font-normal text-[color:var(--ink)]">{deck.revenue.rateIndependentShare}</span></span>
-          <span>CAC payback <span className="font-normal text-[color:var(--ink)]">{deck.kpis.cacPayback}</span></span>
         </div>
       </Reveal>
     </div>
