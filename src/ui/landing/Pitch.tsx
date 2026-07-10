@@ -310,7 +310,8 @@ function ProblemSlide() {
           in rent every year, and rising.
         </div>
         <div className="mt-2 text-[14px] font-light text-[color:var(--stone)]">
-          growing {deck.market.rentHistGrowth} · projected {deck.market.rentProjected2026} by 2026
+          growing {deck.market.rentHistGrowth} · projected {deck.market.rentProjected} by{' '}
+          {deck.market.rentProjectedYear}
         </div>
       </Reveal>
       <Reveal order={2}>
@@ -986,6 +987,9 @@ function AppendixSlide() {
               ))}
             </tbody>
           </table>
+          <p className="mt-2 text-[11px] font-light leading-relaxed text-[color:var(--body)]">
+            {m.projectionFormula}
+          </p>
           <Footnote>{m.caveat}</Footnote>
 
           <Label className="mt-8">The math · A · business model, {eurInt(deck.revenue.fullStackPerUnit)}/unit/yr</Label>

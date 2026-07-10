@@ -14,9 +14,9 @@ export const deck = {
     // COICOP item CP041 "Actual rentals for housing", EU27_2020, current prices.
     // Actuals (reported): 2020 €159.4bn · 2021 €167.8bn · 2022 €176.8bn
     rentActual2022: '€176.8bn',
-    rentHistGrowth: '≈ 5.3%/yr nominal (2020–22)',
-    rentProjected2026: '≈ €208bn', // central scenario, 4.2% CAGR from 2022 base
-    rentProjected2030: '≈ €246bn', // central scenario
+    rentHistGrowth: 'about 5.3% per year',
+    rentProjected: 'about €246bn', // central scenario: 4.2% CAGR, 8 years from the 2022 base
+    rentProjectedYear: '2030',
     provenance:
       "Eurostat nama_10_co3_p3, item CP041 'Actual rentals for housing', EU27. 2022 actual €176.8bn; projections at 4.2% CAGR (central scenario).",
     // Germany fix: §551 BGB requires interest-bearing deposits with interest
@@ -258,6 +258,8 @@ export const deck = {
       ['2030 (projected)', '€233bn', '€246bn', '€265bn'],
     ] as [string, string, string, string][],
     scenarioHeads: ['Year', 'Conservative', 'Central', 'Trend'],
+    projectionFormula:
+      'V_T = V₀ × (1 + r)^(T − 2022), V₀ = €176.8bn (2022 actual). Central 2030: €176.8bn × (1.042)^8 ≈ €176.8bn × 1.390 ≈ €246bn (4.2% CAGR, 8 years).',
     caveat:
       'CP041 measures tenant cash rent (household consumption); excludes imputed owner-occupier rent — a conservative floor on European rental flows.',
   },
