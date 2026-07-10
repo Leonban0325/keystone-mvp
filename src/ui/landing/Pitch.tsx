@@ -494,12 +494,10 @@ function MagicSlide() {
 function ModelSlide() {
   const streams: [string, string][] = [
     ['SaaS subscription · the core', eurInt(deck.revenue.saas)],
-    ['Savings engine success fee · 25% of documented savings', eurDec(deck.revenue.savingsFee)],
     ['NIM share · 27% of yield (the only rate-linked line)', eurInt(deck.revenue.nim)],
+    ['Savings engine success fee · 25% of documented savings', eurDec(deck.revenue.savingsFee)],
     ['Card interchange', eurInt(deck.revenue.interchange)],
     ['Deposit custody & guarantee', eurInt(deck.revenue.custody)],
-    ['Premium compliance tier', '—'],
-    ['Supplier network / embedded finance', 'later'],
   ]
   return (
     <div>
@@ -508,11 +506,14 @@ function ModelSlide() {
           <Statement size="text-[7rem]">{eurInt(deck.revenue.fullStackPerUnit)}</Statement>
           <span className="text-[18px] font-light text-[color:var(--stone)]">per unit / yr · full stack</span>
         </div>
-        <Subtitle>{deck.revenue.rateIndependentShare} of revenue is rate-independent.</Subtitle>
+        <Subtitle>
+          About {eurInt(deck.revenue.fullStackPerUnit)} per unit per year, from five revenue
+          lines. {deck.revenue.rateIndependentShare} of revenue is rate-independent.
+        </Subtitle>
       </Reveal>
       <div className="mt-8 grid grid-cols-[1.25fr_1fr] gap-16">
         <Reveal order={1}>
-          <Label>Seven revenue streams · per unit / yr</Label>
+          <Label>Five revenue streams · per unit / yr</Label>
           <div className="mt-3 divide-y divide-[color:var(--hairline)] border-y border-[color:var(--hairline)]">
             {streams.map(([label, value]) => (
               <div key={label} className="flex items-baseline justify-between gap-6 py-2 text-[14px]">
@@ -686,7 +687,6 @@ function TeamSlide() {
             <div className="mt-1 text-[11px] font-medium uppercase tracking-[0.14em] text-[color:var(--stone)]">
               {member.role}
             </div>
-            <div className="mt-2 text-[12px] font-light italic leading-relaxed text-[color:var(--stone)]">{member.line}</div>
           </Reveal>
         ))}
       </div>
@@ -875,12 +875,6 @@ function StatusSlide() {
             </div>
           </Reveal>
           <Reveal order={2}>
-            <Label className="mt-6">Traction</Label>
-            <p className="mt-2 text-[13px] font-light italic leading-relaxed text-[color:var(--stone)]">
-              {deck.tractionPlaceholder}
-            </p>
-          </Reveal>
-          <Reveal order={3}>
             <Label className="mt-6">Next 6 to 12 months</Label>
             <p className="mt-2 text-[14px] font-light leading-relaxed text-[color:var(--body)]">
               Sign partner bank + EMI provider · launch first markets · first landlord and
@@ -888,7 +882,7 @@ function StatusSlide() {
             </p>
           </Reveal>
         </div>
-        <Reveal order={4} className="flex flex-col items-end justify-end">
+        <Reveal order={3} className="flex flex-col items-end justify-end">
           <div className="border border-[color:var(--hairline)] p-3">
             <QrCode value={deck.prototypeUrl} />
           </div>
@@ -1023,6 +1017,18 @@ function AppendixSlide() {
               <div key={line}>{line}</div>
             ))}
           </div>
+          <Label className="mt-5">The math · D · five-year forecast</Label>
+          <div className="mt-2 space-y-1 text-[11px] font-light leading-relaxed text-[color:var(--body)]">
+            {deck.math.forecastDetail.map((line) => (
+              <div key={line}>{line}</div>
+            ))}
+          </div>
+          <Label className="mt-5">The math · E · key-metrics derivation</Label>
+          <div className="mt-2 space-y-1 text-[11px] font-light leading-relaxed text-[color:var(--body)]">
+            {deck.math.metrics.map((line) => (
+              <div key={line}>{line}</div>
+            ))}
+          </div>
         </div>
         <div>
           <Label>Statutory regime table · as encoded</Label>
@@ -1050,6 +1056,45 @@ function AppendixSlide() {
           <Footnote>
             Versioned rules with legal references, tested like software.
           </Footnote>
+
+          <Label className="mt-8">F · how the {deck.ask.amount} ask was derived</Label>
+          <p className="mt-2 text-[11px] font-light leading-relaxed text-[color:var(--body)]">
+            {deck.askDerivation.intro}
+          </p>
+          <div className="mt-3">
+            {deck.askDerivation.groups.map((g) => (
+              <div key={g.group} className="mb-2">
+                <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-[color:var(--stone)]">
+                  {g.group}
+                </div>
+                {g.items.map(([label, amount, pct]) => (
+                  <div key={label} className="flex items-baseline justify-between gap-4 border-b border-[color:var(--hairline)] py-1 text-[11px]">
+                    <span className="font-light text-[color:var(--body)]">{label}</span>
+                    <span className="shrink-0 tabular-nums">
+                      <span className="font-medium text-[color:var(--ink)]">{amount}</span>
+                      <span className="ml-2 font-light text-[color:var(--stone)]">{pct}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ))}
+            <div className="flex items-baseline justify-between gap-4 py-1 text-[11px] font-medium text-[color:var(--ink)]">
+              <span>{deck.askDerivation.total[0]}</span>
+              <span className="tabular-nums">
+                {deck.askDerivation.total[1]}
+                <span className="ml-2">{deck.askDerivation.total[2]}</span>
+              </span>
+            </div>
+          </div>
+          <div className="mt-3 space-y-1 text-[11px] font-light leading-relaxed text-[color:var(--body)]">
+            <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-[color:var(--stone)]">
+              Reconciliation to the Slide 11 functional split (50 / 30 / 15 / 5)
+            </div>
+            {deck.askDerivation.reconciliation.map((line) => (
+              <div key={line}>{line}</div>
+            ))}
+          </div>
+          <Footnote>{deck.askDerivation.confirm}</Footnote>
         </div>
       </div>
     </div>

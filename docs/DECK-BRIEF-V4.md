@@ -80,3 +80,18 @@ accent per slide max (title contact box · problem stat underline · value-prop 
 Keystone-beside-the-flow · collar Keystone segment · GTM "First" · moat line · none on team ·
 EBITDA margin line · status done-marks · use-of-funds lead segment). Charts beige + red on
 navy, no white backgrounds.
+
+## Phase Fix v3 (applied)
+1. Five revenue streams (Premium compliance tier and Supplier network removed); headline
+   "about €225 per unit per year, from five revenue lines"; appendix reconciles the five
+   lines to €237.50 gross at full adoption vs €225 blended across the mix. €172 appears
+   nowhere (rate-stressed floor only, if ever needed).
+2. Competition moat line carries no statutory law names.
+3. Team slide: photo + name + role only (credibility-line field deleted).
+4. Status slide: traction section removed (product status + milestones + next 6 to 12
+   months + QR).
+5. Ask split unchanged at 50/30/15/5, now derived from the itemised Appendix F (founders
+   draw no salary).
+6. Appendix adds D (five-year forecast math), E (key-metrics derivation) and F (the
+   itemised €750k with reconciliation to the functional split and the two confirm-figures
+   noted).
