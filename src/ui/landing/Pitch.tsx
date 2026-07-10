@@ -656,6 +656,21 @@ function PhotoPlaceholder() {
   )
 }
 
+/** Founder headshot from public/photos — falls back to the neutral
+ *  placeholder while the file is missing. Consistent 4:5 crop. */
+function FounderPhoto(props: { src: string; name: string }) {
+  const [failed, setFailed] = useState(false)
+  if (failed) return <PhotoPlaceholder />
+  return (
+    <img
+      src={props.src}
+      alt={props.name}
+      className="aspect-[4/5] w-full border border-[color:var(--hairline)] object-cover object-top"
+      onError={() => setFailed(true)}
+    />
+  )
+}
+
 function TeamSlide() {
   return (
     <div>
@@ -666,7 +681,7 @@ function TeamSlide() {
       <div className="mt-10 grid grid-cols-4 gap-10">
         {deck.team.map((member, i) => (
           <Reveal key={member.name} order={i + 1}>
-            <PhotoPlaceholder />
+            <FounderPhoto src={member.photo} name={member.name} />
             <div className="mt-3 text-[19px] font-semibold leading-tight text-[color:var(--ink)]">{member.name}</div>
             <div className="mt-1 text-[11px] font-medium uppercase tracking-[0.14em] text-[color:var(--stone)]">
               {member.role}

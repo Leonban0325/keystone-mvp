@@ -153,10 +153,10 @@ export const deck = {
 
   /** Slide 8 — role per founder (credibility lines are bracketed placeholders). */
   team: [
-    { name: 'Leon Ban', role: 'Product & engineering', line: '[credibility line to fill]' },
-    { name: 'Badriah Al-Besharah', role: 'Regulatory & operations', line: '[credibility line to fill]' },
-    { name: 'Duong Bui', role: 'Finance & treasury', line: '[credibility line to fill]' },
-    { name: 'Mark Gebrane', role: 'Growth & partnerships', line: '[credibility line to fill]' },
+    { name: 'Leon Ban', role: 'Product & engineering', line: '[credibility line to fill]', photo: '/photos/leon-ban.jpg' },
+    { name: 'Badriah Al-Besharah', role: 'Regulatory & operations', line: '[credibility line to fill]', photo: '/photos/badriah-al-besharah.jpg' },
+    { name: 'Duong Bui', role: 'Finance & treasury', line: '[credibility line to fill]', photo: '/photos/duong-bui.jpg' },
+    { name: 'Mark Gebrane', role: 'Growth & partnerships', line: '[credibility line to fill]', photo: '/photos/mark-gebrane.jpg' },
   ],
 
   /** Slide 10 — the bracketed traction placeholder (fill or delete before presenting). */
